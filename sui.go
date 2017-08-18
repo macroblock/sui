@@ -1,6 +1,9 @@
 package sui
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
 )
@@ -9,6 +12,7 @@ var glob struct {
 	sysWindows []SystemWindow
 }
 
+// SystemWindow ...
 type SystemWindow struct {
 	title         string
 	width, height int32
@@ -16,6 +20,7 @@ type SystemWindow struct {
 	surface       *sdl.Surface
 }
 
+// NewSystemWindow ...
 func NewSystemWindow(title string, width, height int) (*SystemWindow, error) {
 	window, err := sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, width, height, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
 	if err != nil {
@@ -45,6 +50,8 @@ func Init() error {
 	if err := ttf.Init(); err != nil {
 		return err
 	}
+	InitFonts()
+
 	return nil
 }
 
@@ -52,4 +59,32 @@ func Init() error {
 func Close() {
 	ttf.Quit()
 	sdl.Quit()
+}
+
+// Run ...
+func Run() int {
+
+	quit := false
+	for event := sdl.PollEvent(); event != nil || !quit; event = sdl.PollEvent() {
+		switch t := event.(type) {
+		case *sdl.QuitEvent:
+			quit = true
+		case *sdl.KeyDownEvent:
+			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+			if t.Keysym.Sym == sdl.K_ESCAPE {
+				quit = true
+			}
+		case *sdl.KeyUpEvent:
+			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+		}
+
+		if quit {
+			break
+		}
+
+		time.Sleep(1)
+	}
+
+	fmt.Printf("done.")
+	return 0
 }
