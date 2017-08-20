@@ -24,12 +24,50 @@ func (o *Point) Max(point Point) {
 	}
 }
 
-func NewRect(pos, size Point) sdl.Rect {
-	return sdl.Rect{int32(pos.X), int32(pos.Y), int32(size.X), int32(size.Y)}
-
+type Color struct {
+	sdl.Color
 }
 
-func callback(fn CallbackFn, o Widgeter) bool {
+func Color32(c uint32) Color {
+	return Color{
+		sdl.Color{
+			uint8((c >> 0) & 0xff),
+			uint8((c >> 8) & 0xff),
+			uint8((c >> 16) & 0xff),
+			uint8((c >> 24) & 0xff),
+		},
+	}
+}
+
+func (o Color) RGBA() (byte, byte, byte, byte) {
+	return o.R, o.G, o.B, o.A
+}
+
+type Rect struct {
+	Pos  Point
+	Size Point
+}
+
+func NewRect(pos, size Point) Rect {
+	return Rect{pos, size}
+}
+
+func (o Rect) XYWH() (int32, int32, int32, int32) {
+	return int32(o.Pos.X), int32(o.Pos.Y), int32(o.Size.X), int32(o.Size.Y)
+}
+
+func (o Rect) Rect() *sdl.Rect {
+	return &sdl.Rect{int32(o.Pos.X), int32(o.Pos.Y), int32(o.Size.X), int32(o.Size.Y)}
+}
+
+func (o *Rect) Extend(d int) {
+	o.Pos.X -= d
+	o.Pos.Y -= d
+	o.Size.X += d << 1
+	o.Size.Y += d << 1
+}
+
+func callback(fn CallbackFn, o Widget) bool {
 	if fn != nil {
 		return fn(o)
 	}
@@ -54,13 +92,4 @@ func MaxInt(a, b int) int {
 		return a
 	}
 	return b
-}
-
-func uint32toColor(c uint32) sdl.Color {
-	return sdl.Color{
-		uint8((c >> 0) & 0xff),
-		uint8((c >> 8) & 0xff),
-		uint8((c >> 16) & 0xff),
-		uint8((c >> 24) & 0xff),
-	}
 }

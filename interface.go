@@ -5,33 +5,42 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
-type Widgeter interface {
-	AddChild(child Widgeter)
-	RemoveChild(child Widgeter)
-	Move(x, y int)
-	Resize(width, height int)
+type Widget interface {
+	Close()
+	Parent() Widget
+	SetParent(Widget)
+	Children() []Widget
+	AddChild(child Widget)
+	RemoveChild(child Widget)
+	Pos() Point
 	SetPos(pos Point)
+	Move(x, y int)
+	Size() Point
 	SetSize(size Point)
+	Resize(width, height int)
+	Font() *ttf.Font
 	Surface() *sdl.Surface
 	Renderer() *sdl.Renderer
-	Children() []Widgeter
-	Parent() Widgeter
-	SetParent(Widgeter)
 	Repaint()
-	Pos() Point
-	Size() Point
+	SetClearColor(color Color)
+	SetColor(color Color)
+	SetTextColor(color Color)
+	Clear()
+	Fill(rect Rect)
+	Rect(rect Rect)
+	Line(a, b Point)
+	WriteText(pos Point, str string) Point
+	//IsInside(x, y int32) bool
+	TranslateAbsToRel(x, y int) (int, int)
+	draw()
+	enter()
+	leave()
+	mouseButtonDown()
+	mouseButtonUp()
 	//MouseDoubleClick(x, y int32)
-	//MousePressDown(x, y int32, button uint8)
-	//MousePressUp(x, y int32, button uint8)
-	//MouseMove(x, y, xrel, yrel int32)
+	mouseOver()
 	//KeyDown(key sdl.Keycode, mod uint16)
 	//KeyUp(key sdl.Keycode, mod uint16)
-	//TranslateXYToWidget(globalX, globalY int32) (x, y int32)
-	//IsInside(x, y int32) bool
-	//HasFocus(focus bool)
-	Font() *ttf.Font
-	WriteText(pos Point, str string, color uint32) Point
-	Close()
 	//DragMove(x, y int32, payload DragPayload)
 	//DragEnter(x, y int32, payload DragPayload)
 	//DragLeave(payload DragPayload)

@@ -8,63 +8,18 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
+import "C"
+
 var glob struct {
-	sysWindows []*SystemWindow
-	needUpdate bool
-}
-
-// SystemWindow ...
-type SystemWindow struct {
-	Widget
-	window *sdl.Window
-}
-
-// NewSystemWindow ...
-func NewSystemWindow(title string, width, height int) *SystemWindow {
-	window, err := sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, width, height, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
-	__(err)
-
-	sysWindow := &SystemWindow{
-		Widget: Widget{},
-		window: window,
-	}
-	w, h := window.GetSize()
-	sysWindow.Resize(w, h)
-	sysWindow.SetColor(0xff00dddd)
-	sysWindow.SetFont(defaultFont)
-
-	glob.sysWindows = append(glob.sysWindows, sysWindow)
-
-	return sysWindow
-}
-
-func (o *SystemWindow) UpdateSurface() {
-	o.window.UpdateSurface()
-}
-
-func (o *SystemWindow) Resize(w, h int) {
-	//fmt.Printf("sys resize: id [%d], size: %dx%d\n", o.window.GetID(), w, h)
-	sizew, sizeh := o.window.GetSize()
-	//fmt.Printf("getSize: id [%d], size: %dx%d\n", o.window.GetID(), sizew, sizeh)
-	err := error(nil)
-	o.surface.Free()
-	o.surface, err = o.window.GetSurface()
-	__(err)
-	o.renderer.Destroy()
-	o.renderer, err = sdl.CreateSoftwareRenderer(o.surface)
-	__(err)
-	sizew, sizeh, err = o.renderer.GetRendererOutputSize()
-	__(err)
-	fmt.Printf("getRendererOutputSize: id [%d], size: %dx%d\n", o.window.GetID(), sizew, sizeh)
-
-	o.size = Point{sizew, sizeh}
-	PostUpdate()
-}
-
-func (o *SystemWindow) Close() {
-	o.Widget.Close()
-	o.renderer.Destroy()
-	o.surface.Free()
+	rootWindows        []*RootWindow
+	needUpdate         bool
+	sender             Widget
+	focus              Widget
+	prevFocus          Widget
+	mouseOver          Widget
+	prevMouseOver      Widget
+	x, y               int
+	mouseButtonPressed bool
 }
 
 // Init ...
@@ -85,60 +40,147 @@ func Close() {
 	//for _, root := range glob.sysWindows {
 	//	root.Close()
 	//}
-	glob.sysWindows = nil
+	glob.rootWindows = nil
 
 	ttf.Quit()
 	sdl.Quit()
+}
+
+func findWidget(x, y int, root Widget) (target Widget, xTarget, yTarget int) {
+	target = nil
+	x -= root.Pos().X
+	y -= root.Pos().Y
+
+	for _, child := range root.Children() {
+		xMin := child.Pos().X
+		yMin := child.Pos().Y
+		xMax := child.Pos().X + child.Size().X
+		yMax := child.Pos().Y + child.Size().Y
+		xMin = MaxInt(xMin, 0)
+		yMin = MaxInt(yMin, 0)
+		xMax = MinInt(xMax, root.Size().X)
+		yMax = MinInt(yMax, root.Size().Y)
+		if x >= xMin && x < xMax && y >= yMin && y < yMax {
+			target = child
+		}
+	}
+
+	if target != nil {
+		return findWidget(x, y, target)
+	}
+	if x >= 0 && x < root.Size().X && y >= 0 && y < root.Size().Y {
+		return root, x, y
+	}
+	return nil, -1, -1
 }
 
 func PostUpdate() {
 	glob.needUpdate = true
 }
 
+func Sender() Widget {
+	return glob.sender
+}
+
+func PrevMouseOver() Widget {
+	return glob.prevMouseOver
+}
+
 // Run ...
 func Run() int {
 	quit := false
 	PostUpdate()
-	for event := sdl.PollEvent(); event != nil || !quit; event = sdl.PollEvent() {
+	//for event := sdl.PollEvent(); event != nil || !quit; event = sdl.PollEvent() {
+	for {
+		event := sdl.PollEvent()
+		if event == nil {
+			time.Sleep(1)
+			continue
+		}
+
 		switch t := event.(type) {
 		case *sdl.QuitEvent:
 			quit = true
+
+		case *sdl.MouseButtonEvent:
+			if t.Type == sdl.MOUSEBUTTONDOWN {
+				glob.mouseButtonPressed = true
+				glob.focus, glob.x, glob.y = findWidget(int(t.X), int(t.Y), glob.rootWindows[0])
+				if glob.prevFocus != glob.focus {
+					if glob.prevFocus != nil {
+						glob.prevFocus.leave()
+						fmt.Println("leave")
+					}
+					if glob.focus != nil {
+						glob.focus.enter()
+						fmt.Println("enter: ", glob.focus)
+					}
+					glob.prevFocus = glob.focus
+				}
+				if glob.focus != nil {
+					glob.focus.mouseButtonDown()
+				}
+			}
+			if t.Type == sdl.MOUSEBUTTONUP {
+				glob.mouseButtonPressed = false
+				if glob.focus != nil {
+					glob.x, glob.y = glob.focus.TranslateAbsToRel(int(t.X), int(t.Y))
+					glob.focus.mouseButtonUp()
+				}
+			}
+
+		case *sdl.MouseMotionEvent:
+			if t.Type == sdl.MOUSEMOTION {
+				if glob.mouseButtonPressed == false {
+					//before, bxTarget, byTarget := findWidget(t.X-t.XRel, t.Y-t.YRel, root)
+					glob.mouseOver, glob.x, glob.y = findWidget(int(t.X), int(t.Y), glob.rootWindows[0])
+
+					if glob.mouseOver != glob.prevMouseOver {
+						if glob.mouseOver != nil {
+							glob.mouseOver.mouseOver()
+						}
+						glob.prevMouseOver = glob.mouseOver
+					}
+				}
+			}
+
 		case *sdl.WindowEvent:
 			switch t.Event {
 			case sdl.WINDOWEVENT_RESIZED:
 				fmt.Printf("WINDOWEVENT RESIZED: id [%d], size: %dx%d\n", t.WindowID, t.Data1, t.Data2)
-				for _, root := range glob.sysWindows {
+				for _, root := range glob.rootWindows {
 					root.Resize(int(t.Data1), int(t.Data2))
 				}
 				PostUpdate()
-
 				//case sdl.WINDOWEVENT_SIZE_CHANGED:
 				//	fmt.Printf("size changed: id [%d], size: %dx%d\n", t.WindowID, t.Data1, t.Data2)
 			}
+
 		case *sdl.KeyDownEvent:
 			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
 			if t.Keysym.Sym == sdl.K_ESCAPE {
 				quit = true
 			}
+
 		case *sdl.KeyUpEvent:
 			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+		case *sdl.DropEvent:
+			str := C.GoString((*C.char)(t.File))
+			fmt.Println(str)
+
 		}
 
 		if quit {
 			break
 		}
-		//fmt.Println("->")
+
 		if glob.needUpdate {
-			for _, root := range glob.sysWindows {
-				//fmt.Println(root.W(), root.H())
+			for _, root := range glob.rootWindows {
 				root.Repaint()
 				root.UpdateSurface()
 			}
 			glob.needUpdate = false
 		}
-		//fmt.Println("))")
-
-		time.Sleep(1)
 	}
 
 	fmt.Printf("done.")
