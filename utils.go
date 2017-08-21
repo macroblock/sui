@@ -6,6 +6,10 @@ type Point struct {
 	X, Y int
 }
 
+func NewPoint(x, y int) Point {
+	return Point{X: x, Y: y}
+}
+
 func (o *Point) Min(point Point) {
 	if o.X > point.X {
 		o.X = point.X

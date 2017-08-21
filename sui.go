@@ -20,6 +20,7 @@ var glob struct {
 	prevMouseOver      Widget
 	x, y               int
 	mouseButtonPressed bool
+	dropFile           string
 }
 
 // Init ...
@@ -86,6 +87,10 @@ func PrevMouseOver() Widget {
 	return glob.prevMouseOver
 }
 
+func DropFile() string {
+	return glob.dropFile
+}
+
 // Run ...
 func Run() int {
 	quit := false
@@ -123,9 +128,13 @@ func Run() int {
 			}
 			if t.Type == sdl.MOUSEBUTTONUP {
 				glob.mouseButtonPressed = false
-				if glob.focus != nil {
-					glob.x, glob.y = glob.focus.TranslateAbsToRel(int(t.X), int(t.Y))
-					glob.focus.mouseButtonUp()
+				temp := glob.focus
+				temp, glob.x, glob.y = findWidget(int(t.X), int(t.Y), glob.rootWindows[0])
+				if temp != nil {
+					temp.mouseButtonUp()
+					if glob.focus == temp {
+						glob.focus.mouseClick()
+					}
 				}
 			}
 
@@ -164,10 +173,13 @@ func Run() int {
 
 		case *sdl.KeyUpEvent:
 			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
-		case *sdl.DropEvent:
-			str := C.GoString((*C.char)(t.File))
-			fmt.Println(str)
 
+		case *sdl.DropEvent:
+			glob.dropFile = C.GoString((*C.char)(t.File))
+			fmt.Println(glob.dropFile)
+			glob.rootWindows[0].dropFile()
+			glob.dropFile = ""
+			PostUpdate()
 		}
 
 		if quit {

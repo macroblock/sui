@@ -37,6 +37,7 @@ type Widget interface {
 	leave()
 	mouseButtonDown()
 	mouseButtonUp()
+	mouseClick()
 	//MouseDoubleClick(x, y int32)
 	mouseOver()
 	//KeyDown(key sdl.Keycode, mod uint16)

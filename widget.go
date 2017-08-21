@@ -28,6 +28,7 @@ type Box struct {
 	OnLeave           CallbackFn
 	OnMouseButtonDown CallbackFn
 	OnMouseButtonUp   CallbackFn
+	OnMouseClick      CallbackFn
 	OnMouseOver       CallbackFn
 }
 
@@ -145,6 +146,10 @@ func (o *Box) mouseButtonDown() {
 
 func (o *Box) mouseButtonUp() {
 	callback(o.OnMouseButtonUp, o)
+}
+
+func (o *Box) mouseClick() {
+	callback(o.OnMouseClick, o)
 }
 
 func (o *Box) mouseOver() {

@@ -9,7 +9,8 @@ import (
 // RootWindow ...
 type RootWindow struct {
 	Box
-	window *sdl.Window
+	window     *sdl.Window
+	OnDropFile CallbackFn
 }
 
 // NewRootWindow ...
@@ -63,4 +64,8 @@ func (o *RootWindow) Close() {
 	//o.renderer.Destroy()
 	//o.surface.Free()
 	o.window.Destroy()
+}
+
+func (o *RootWindow) dropFile() {
+	callback(o.OnDropFile, o)
 }
