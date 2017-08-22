@@ -8,7 +8,7 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
-type CallbackFn func(o Widget) bool
+//type func() func(o Widget) bool
 
 type Box struct {
 	Widget
@@ -23,13 +23,13 @@ type Box struct {
 	size       Point
 	font       *ttf.Font
 
-	OnDraw            CallbackFn
-	OnEnter           CallbackFn
-	OnLeave           CallbackFn
-	OnMouseButtonDown CallbackFn
-	OnMouseButtonUp   CallbackFn
-	OnMouseClick      CallbackFn
-	OnMouseOver       CallbackFn
+	OnDraw            func()
+	OnEnter           func()
+	OnLeave           func()
+	OnMouseButtonDown func()
+	OnMouseButtonUp   func()
+	OnMouseClick      func()
+	OnMouseOver       func()
 }
 
 func NewBox(w, h int) *Box {
@@ -133,27 +133,27 @@ func (o *Box) TranslateAbsToRel(x, y int) (int, int) {
 }
 
 func (o *Box) enter() {
-	callback(o.OnEnter, o)
+	callback(o.OnEnter)
 }
 
 func (o *Box) leave() {
-	callback(o.OnLeave, o)
+	callback(o.OnLeave)
 }
 
 func (o *Box) mouseButtonDown() {
-	callback(o.OnMouseButtonDown, o)
+	callback(o.OnMouseButtonDown)
 }
 
 func (o *Box) mouseButtonUp() {
-	callback(o.OnMouseButtonUp, o)
+	callback(o.OnMouseButtonUp)
 }
 
 func (o *Box) mouseClick() {
-	callback(o.OnMouseClick, o)
+	callback(o.OnMouseClick)
 }
 
 func (o *Box) mouseOver() {
-	callback(o.OnMouseOver, o)
+	callback(o.OnMouseOver)
 }
 
 func (o *Box) Move(x, y int) {
@@ -234,13 +234,15 @@ func (o *Box) WriteText(pos Point, str string) Point {
 }
 
 func (o *Box) draw() {
-	if !callback(o.OnDraw, o) {
+	if !callback(o.OnDraw) {
 		o.Clear()
 	}
 }
 
 func (o *Box) Repaint() {
+	glob.sender = o
 	o.draw()
+	glob.sender = nil
 	for _, child := range o.children {
 		child.Repaint()
 		src := NewRect(Point{}, child.Size())

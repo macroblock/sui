@@ -83,6 +83,10 @@ func Sender() Widget {
 	return glob.sender
 }
 
+func MouseOver() Widget {
+	return glob.mouseOver
+}
+
 func PrevMouseOver() Widget {
 	return glob.prevMouseOver
 }
@@ -113,45 +117,50 @@ func Run() int {
 				glob.focus, glob.x, glob.y = findWidget(int(t.X), int(t.Y), glob.rootWindows[0])
 				if glob.prevFocus != glob.focus {
 					if glob.prevFocus != nil {
+						glob.sender = glob.prevFocus
 						glob.prevFocus.leave()
 						fmt.Println("leave")
 					}
 					if glob.focus != nil {
+						glob.sender = glob.focus
 						glob.focus.enter()
 						fmt.Println("enter: ", glob.focus)
 					}
 					glob.prevFocus = glob.focus
 				}
 				if glob.focus != nil {
+					glob.sender = glob.focus
 					glob.focus.mouseButtonDown()
 				}
 			}
 			if t.Type == sdl.MOUSEBUTTONUP {
 				glob.mouseButtonPressed = false
-				temp := glob.focus
-				temp, glob.x, glob.y = findWidget(int(t.X), int(t.Y), glob.rootWindows[0])
-				if temp != nil {
-					temp.mouseButtonUp()
-					if glob.focus == temp {
+				glob.sender, glob.x, glob.y = findWidget(int(t.X), int(t.Y), glob.rootWindows[0])
+				if glob.sender != nil {
+					glob.sender.mouseButtonUp()
+					if glob.focus == glob.sender {
+						glob.sender = glob.focus
 						glob.focus.mouseClick()
 					}
 				}
 			}
+			glob.sender = nil
 
 		case *sdl.MouseMotionEvent:
 			if t.Type == sdl.MOUSEMOTION {
 				if glob.mouseButtonPressed == false {
-					//before, bxTarget, byTarget := findWidget(t.X-t.XRel, t.Y-t.YRel, root)
 					glob.mouseOver, glob.x, glob.y = findWidget(int(t.X), int(t.Y), glob.rootWindows[0])
 
 					if glob.mouseOver != glob.prevMouseOver {
 						if glob.mouseOver != nil {
+							glob.sender = glob.mouseOver
 							glob.mouseOver.mouseOver()
 						}
 						glob.prevMouseOver = glob.mouseOver
 					}
 				}
 			}
+			glob.sender = nil
 
 		case *sdl.WindowEvent:
 			switch t.Event {

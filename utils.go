@@ -71,9 +71,10 @@ func (o *Rect) Extend(d int) {
 	o.Size.Y += d << 1
 }
 
-func callback(fn CallbackFn, o Widget) bool {
+func callback(fn func()) bool {
 	if fn != nil {
-		return fn(o)
+		fn()
+		return true
 	}
 	return false
 }

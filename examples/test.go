@@ -24,6 +24,8 @@ var (
 	files []string
 
 	numThreads = 1
+
+	root *sui.RootWindow
 )
 
 func isClosed(ch <-chan interface{}) bool {
@@ -82,7 +84,8 @@ func ftpTest() {
 
 }
 
-func onDraw(o sui.Widget) bool {
+func onDraw() {
+	o := sui.Sender()
 	rect := sui.NewRect(sui.Point{}, o.Size())
 	//fmt.Println("rect: ", rect)
 	//rect.Extend(-1)
@@ -98,7 +101,6 @@ func onDraw(o sui.Widget) bool {
 		pos.Y += ofs.Y
 		ofs = o.WriteText(pos, fileName)
 	}
-	return true
 }
 
 /*func onEnter(o sui.Widget) bool {
@@ -111,125 +113,125 @@ func onLeave(o sui.Widget) bool {
 	return true
 }*/
 
-func onMouseClick(o sui.Widget) bool {
+func onMouseClick() {
+	o := sui.Sender()
 	fmt.Println("!!!!!!!! MouseClick: ", o)
 	o.SetClearColor(sui.Palette.BackgroundLo)
-	return true
 }
 
-func onMouseOver(o sui.Widget) bool {
-	if o != nil {
-		o.SetClearColor(sui.Palette.BackgroundHi)
+func onMouseOver() {
+	x := sui.MouseOver()
+	if x != nil && x != root {
+		x.SetClearColor(sui.Palette.BackgroundHi)
 	}
-	if sui.PrevMouseOver() != nil {
+	if sui.PrevMouseOver() != nil && sui.PrevMouseOver() != root {
 		sui.PrevMouseOver().SetClearColor(sui.Palette.Background)
 	}
-	return true
 }
 
-func onPressMouseDown(o sui.Widget) bool {
+func onPressMouseDown() {
+	o := sui.Sender()
 	fmt.Println("MousePressDown: ", o)
-	return true
 }
 
-func onPressMouseUp(o sui.Widget) bool {
+func onPressMouseUp() {
+	o := sui.Sender()
 	fmt.Println("MousePressUp: ", o)
-	return true
 }
 
-func onDropFile(o sui.Widget) bool {
+func onDropFile() {
 	files = append(files, sui.DropFile())
-	return true
 }
 
 func main() {
 	fmt.Println(ftpUser + ":" + ftpPassword + "@ftp://" + ftpHost + ":" + strconv.Itoa(ftpPort))
-	ftpTest()
+	//ftpTest()
 	err := sui.Init()
 	defer sui.Close()
 	if err != nil {
 		panic(err)
 	}
-	root := sui.NewRootWindow("test", 800, 600)
+	root = sui.NewRootWindow("test", 800, 600)
 	root.SetClearColor(sui.Palette.BackgroundLo)
 	//root.SetClearColor(sui.Color32(0x00000000))
 	root.OnDropFile = onDropFile
 	//root.OnDraw = onDraw
 	//root.OnEnter = onEnter
 	//root.OnLeave = onLeave
-	//root.OnMouseOver = onMouseOver
+	root.OnMouseOver = onMouseOver
 	root.OnMouseButtonDown = onPressMouseDown
 	root.OnMouseButtonUp = onPressMouseUp
 	//root.OnMouseClick = onMouseClick
 
 	btnInc := sui.NewBox(40, 35)
 	btnInc.Move(5, 5)
-	btnInc.OnDraw = func(o sui.Widget) bool {
+	btnInc.OnMouseOver = onMouseOver
+	btnInc.OnDraw = func() {
+		o := sui.Sender()
 		o.Clear()
 		o.WriteText(sui.NewPoint(5, 5), "Inc")
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
-		return true
 	}
-	btnInc.OnMouseClick = func(o sui.Widget) bool {
+	btnInc.OnMouseClick = func() {
 		numThreads = sui.MinInt(numThreads+1, maxThreads)
 		sui.PostUpdate()
-		return true
 	}
 
 	btnDec := sui.NewBox(40, 35)
 	btnDec.Move(50, 5)
-	btnDec.OnDraw = func(o sui.Widget) bool {
+	btnDec.OnMouseOver = onMouseOver
+	btnDec.OnDraw = func() {
+		o := sui.Sender()
 		o.Clear()
 		o.WriteText(sui.NewPoint(5, 5), "Dec")
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
-		return true
 	}
-	btnDec.OnMouseClick = func(o sui.Widget) bool {
+	btnDec.OnMouseClick = func() {
 		numThreads = sui.MaxInt(numThreads-1, minThreads)
 		sui.PostUpdate()
-		return true
 	}
 
 	lblNumThreads := sui.NewBox(40, 35)
 	lblNumThreads.Move(95, 5)
-	lblNumThreads.OnDraw = func(o sui.Widget) bool {
+	lblNumThreads.OnMouseOver = onMouseOver
+	lblNumThreads.OnDraw = func() {
+		o := sui.Sender()
 		o.Clear()
 		o.WriteText(sui.NewPoint(10, 5), strconv.Itoa(numThreads))
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
-		return true
 	}
 
 	btnStop := sui.NewBox(50, 35)
 	btnStop.Move(140, 5)
-	btnStop.OnDraw = func(o sui.Widget) bool {
+	btnStop.OnMouseOver = onMouseOver
+	btnStop.OnDraw = func() {
+		o := sui.Sender()
 		o.Clear()
 		o.WriteText(sui.NewPoint(5, 5), "Stop")
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
-		return true
 	}
-	btnStop.OnMouseClick = func(o sui.Widget) bool {
-		//numThreads = sui.MaxInt(numThreads-1, minThreads)
+	btnStop.OnMouseClick = func() {
 		sui.PostUpdate()
-		return true
 	}
 
 	btnPlay := sui.NewBox(50, 35)
 	btnPlay.Move(195, 5)
-	btnPlay.OnDraw = func(o sui.Widget) bool {
+	btnPlay.OnMouseOver = onMouseOver
+	btnPlay.OnDraw = func() {
+		o := sui.Sender()
 		o.Clear()
 		o.WriteText(sui.NewPoint(5, 5), "Play")
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
-		return true
 	}
-	btnPlay.OnMouseClick = func(o sui.Widget) bool {
-		//numThreads = sui.MaxInt(numThreads-1, minThreads)
+	btnPlay.OnMouseClick = func() {
 		sui.PostUpdate()
-		return true
 	}
 
 	lbFiles := sui.NewBox(790, 350)
 	lbFiles.Move(5, 45)
-	lbFiles.OnDraw = func(o sui.Widget) bool {
+	lbFiles.OnMouseOver = onMouseOver
+	lbFiles.OnDraw = func() {
+		o := sui.Sender()
 		o.Clear()
 		pos := sui.NewPoint(10, 10)
 		for _, fileName := range files {
@@ -238,7 +240,6 @@ func main() {
 			pos.Y += ofs.Y
 		}
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
-		return true
 	}
 
 	root.AddChild(btnInc)

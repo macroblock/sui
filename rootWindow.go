@@ -10,7 +10,7 @@ import (
 type RootWindow struct {
 	Box
 	window     *sdl.Window
-	OnDropFile CallbackFn
+	OnDropFile func()
 }
 
 // NewRootWindow ...
@@ -67,5 +67,5 @@ func (o *RootWindow) Close() {
 }
 
 func (o *RootWindow) dropFile() {
-	callback(o.OnDropFile, o)
+	callback(o.OnDropFile)
 }
