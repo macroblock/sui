@@ -25,7 +25,8 @@ var (
 
 	numThreads = 1
 
-	root *sui.RootWindow
+	root    *sui.RootWindow
+	lbFiles *sui.ListBox
 )
 
 func isClosed(ch <-chan interface{}) bool {
@@ -53,7 +54,7 @@ func ftpTest() {
 	if err != nil {
 		panic(err)
 	}
-	filename := "\\\\Rackstation\\RACKSTATION\\FILMS_RT\\_series_eng\\Komnata_104\\s01\\sd_2017_Komnata_104_s01__q0w0_trailer.mpg"
+	filename := "c:\\tools\\src.mpg"
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -140,6 +141,7 @@ func onPressMouseUp() {
 }
 
 func onDropFile() {
+	lbFiles.AddItem(sui.DropFile(), nil)
 	files = append(files, sui.DropFile())
 }
 
@@ -227,20 +229,9 @@ func main() {
 		sui.PostUpdate()
 	}
 
-	lbFiles := sui.NewBox(790, 350)
+	lbFiles = sui.NewListBox(790, 350)
 	lbFiles.Move(5, 45)
 	lbFiles.OnMouseOver = onMouseOver
-	lbFiles.OnDraw = func() {
-		o := sui.Sender()
-		o.Clear()
-		pos := sui.NewPoint(10, 10)
-		for _, fileName := range files {
-			ofs := o.WriteText(pos, fileName)
-			pos.X = 10
-			pos.Y += ofs.Y
-		}
-		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
-	}
 
 	root.AddChild(btnInc)
 	root.AddChild(btnDec)

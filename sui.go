@@ -79,6 +79,10 @@ func PostUpdate() {
 	glob.needUpdate = true
 }
 
+func MousePos() Point {
+	return NewPoint(glob.x, glob.y)
+}
+
 func Sender() Widget {
 	return glob.sender
 }
