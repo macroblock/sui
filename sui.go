@@ -19,8 +19,11 @@ var glob struct {
 	mouseOver          Widget
 	prevMouseOver      Widget
 	x, y               int
+	mouseScroll        Point
 	mouseButtonPressed bool
 	dropFile           string
+	modShift           int
+	mouseButton        int
 }
 
 // Init ...
@@ -83,6 +86,10 @@ func MousePos() Point {
 	return NewPoint(glob.x, glob.y)
 }
 
+func SetSender(o Widget) {
+	glob.sender = o
+}
+
 func Sender() Widget {
 	return glob.sender
 }
@@ -93,6 +100,18 @@ func MouseOver() Widget {
 
 func PrevMouseOver() Widget {
 	return glob.prevMouseOver
+}
+
+func MouseScroll() Point {
+	return glob.mouseScroll
+}
+
+func ModShift() int {
+	return glob.modShift
+}
+
+func MouseButton() int {
+	return glob.mouseButton
 }
 
 func DropFile() string {
@@ -144,6 +163,7 @@ func Run() int {
 					glob.sender.mouseButtonUp()
 					if glob.focus == glob.sender {
 						glob.sender = glob.focus
+						glob.mouseButton = int(t.Button)
 						glob.focus.mouseClick()
 					}
 				}
@@ -166,6 +186,17 @@ func Run() int {
 			}
 			glob.sender = nil
 
+		case *sdl.MouseWheelEvent:
+			if t.Type == sdl.MOUSEWHEEL {
+				if glob.mouseOver != nil {
+					glob.sender = glob.mouseOver
+					glob.mouseScroll.X = int(t.X)
+					glob.mouseScroll.Y = int(t.Y)
+					glob.mouseOver.mouseScroll()
+				}
+			}
+			glob.sender = nil
+
 		case *sdl.WindowEvent:
 			switch t.Event {
 			case sdl.WINDOWEVENT_RESIZED:
@@ -183,9 +214,17 @@ func Run() int {
 			if t.Keysym.Sym == sdl.K_ESCAPE {
 				quit = true
 			}
+			if t.Keysym.Sym == sdl.K_LSHIFT || t.Keysym.Sym == sdl.K_RSHIFT {
+				glob.modShift = 1
+			}
+			//fmt.Println(glob.modShift)
 
 		case *sdl.KeyUpEvent:
 			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+			if t.Keysym.Sym == sdl.K_LSHIFT || t.Keysym.Sym == sdl.K_RSHIFT {
+				glob.modShift = 0
+			}
+			//fmt.Println(glob.modShift)
 
 		case *sdl.DropEvent:
 			glob.dropFile = C.GoString((*C.char)(t.File))

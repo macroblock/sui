@@ -30,6 +30,7 @@ type Box struct {
 	OnMouseButtonUp   func()
 	OnMouseClick      func()
 	OnMouseOver       func()
+	OnMouseScroll     func()
 }
 
 func NewBox(w, h int) *Box {
@@ -83,15 +84,26 @@ func (o *Box) SetClearColor(color Color) {
 	o.clearColor = color
 	PostUpdate()
 }
+func (o *Box) ClearColor() Color {
+	return o.clearColor
+}
 
 func (o *Box) SetColor(color Color) {
 	o.drawColor = color
 	PostUpdate()
 }
 
+func (o *Box) Color() Color {
+	return o.drawColor
+}
+
 func (o *Box) SetTextColor(color Color) {
 	o.textColor = color
 	PostUpdate()
+}
+
+func (o *Box) TextColor() Color {
+	return o.textColor
 }
 
 func (o *Box) Font() *ttf.Font {
@@ -154,6 +166,9 @@ func (o *Box) mouseClick() {
 
 func (o *Box) mouseOver() {
 	callback(o.OnMouseOver)
+}
+func (o *Box) mouseScroll() {
+	callback(o.OnMouseScroll)
 }
 
 func (o *Box) Move(x, y int) {
@@ -233,7 +248,7 @@ func (o *Box) WriteText(pos Point, str string) Point {
 	return Point{int(solid.W), int(solid.H)}
 }
 
-func (o *Box) draw() {
+func (o *Box) Draw() {
 	if !callback(o.OnDraw) {
 		o.Clear()
 	}
@@ -241,7 +256,7 @@ func (o *Box) draw() {
 
 func (o *Box) Repaint() {
 	glob.sender = o
-	o.draw()
+	o.Draw()
 	glob.sender = nil
 	for _, child := range o.children {
 		child.Repaint()

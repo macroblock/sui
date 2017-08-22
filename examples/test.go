@@ -26,7 +26,7 @@ var (
 	numThreads = 1
 
 	root    *sui.RootWindow
-	lbFiles *sui.ListBox
+	lbFiles *ListBox
 )
 
 func isClosed(ch <-chan interface{}) bool {
@@ -216,6 +216,32 @@ func main() {
 		sui.PostUpdate()
 	}
 
+	btnMoveToTop := sui.NewBox(95, 35)
+	btnMoveToTop.Move(300, 5)
+	btnMoveToTop.OnMouseOver = onMouseOver
+	btnMoveToTop.OnDraw = func() {
+		o := sui.Sender()
+		o.Clear()
+		o.WriteText(sui.NewPoint(5, 5), "to Top")
+		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
+	}
+	btnMoveToTop.OnMouseClick = func() {
+		sui.PostUpdate()
+	}
+
+	btnMoveToBottom := sui.NewBox(95, 35)
+	btnMoveToBottom.Move(400, 5)
+	btnMoveToBottom.OnMouseOver = onMouseOver
+	btnMoveToBottom.OnDraw = func() {
+		o := sui.Sender()
+		o.Clear()
+		o.WriteText(sui.NewPoint(5, 5), "to Bottom")
+		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
+	}
+	btnMoveToBottom.OnMouseClick = func() {
+		sui.PostUpdate()
+	}
+
 	btnPlay := sui.NewBox(50, 35)
 	btnPlay.Move(195, 5)
 	btnPlay.OnMouseOver = onMouseOver
@@ -229,7 +255,7 @@ func main() {
 		sui.PostUpdate()
 	}
 
-	lbFiles = sui.NewListBox(790, 350)
+	lbFiles = NewListBox(790, 350)
 	lbFiles.Move(5, 45)
 	lbFiles.OnMouseOver = onMouseOver
 
@@ -238,9 +264,11 @@ func main() {
 	root.AddChild(lblNumThreads)
 	root.AddChild(btnStop)
 	root.AddChild(btnPlay)
+	root.AddChild(btnMoveToTop)
+	root.AddChild(btnMoveToBottom)
 	root.AddChild(lbFiles)
 
-	panel := sui.NewBox(500, 180)
+	/*panel := sui.NewBox(500, 180)
 	panel.Move(20, 400)
 	//panel.SetClearColor(sui.Color32(0xffff000))
 	panel.OnDraw = onDraw
@@ -292,6 +320,7 @@ func main() {
 	panel.OnMouseClick = onMouseClick
 	root.AddChild(panel)
 	fmt.Println(root)
+	*/
 
 	sui.Run()
 

@@ -32,7 +32,7 @@ type Widget interface {
 	WriteText(pos Point, str string) Point
 	//IsInside(x, y int32) bool
 	TranslateAbsToRel(x, y int) (int, int)
-	draw()
+	Draw()
 	enter()
 	leave()
 	mouseButtonDown()
@@ -40,6 +40,7 @@ type Widget interface {
 	mouseClick()
 	//MouseDoubleClick(x, y int32)
 	mouseOver()
+	mouseScroll()
 	//KeyDown(key sdl.Keycode, mod uint16)
 	//KeyUp(key sdl.Keycode, mod uint16)
 	//DragMove(x, y int32, payload DragPayload)
