@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jlaffaye/ftp"
+
 	"github.com/macroblock/sui"
 )
 
@@ -23,11 +24,22 @@ var (
 
 	files []string
 
+	ftpConn    *ftp.ServerConn
 	numThreads = 1
 
 	root    *sui.RootWindow
 	lbFiles *ListBox
 )
+
+type ftpItem struct {
+	filename string
+	active   bool
+	working  bool
+	byteSent int64
+	file     *os.File
+	err      error
+	done     chan interface{}
+}
 
 func isClosed(ch <-chan interface{}) bool {
 	select {
@@ -37,6 +49,59 @@ func isClosed(ch <-chan interface{}) bool {
 	}
 
 	return false
+}
+
+func ftpInit() (*ftp.ServerConn, error) {
+	c, err := ftp.DialTimeout(ftpHost+":"+strconv.Itoa(ftpPort), 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	err = c.Login(ftpUser, ftpPassword)
+	if err != nil {
+		return nil, err
+	}
+	err = c.ChangeDir("/master/temp")
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func ftpClose(c *ftp.ServerConn) {
+	c.Quit()
+}
+
+func ftpJob(item *ftpItem) {
+	fmt.Println("sending:", item.filename)
+	stat, err := item.file.Stat()
+	if err != nil {
+		fmt.Println("stat err: ", err)
+	} else {
+		fmt.Printf("size %d\n", stat.Size)
+	}
+	item.err = ftpConn.StorFrom("/master/temp/xxx", item.file, 0)
+	if item.err != nil {
+		fmt.Println("error!!!!:", item.err)
+	}
+	//close(item.done)
+}
+
+func ftpStartJob(item *ftpItem) {
+	item.working = true
+	//item.done = make(chan interface{})
+	file, err := os.Open(item.filename)
+	if err != nil {
+		panic("preJob: " + fmt.Sprint(err))
+	}
+	item.file = file
+	go ftpJob(item)
+	//item.active = false
+	//item.working = false
+	//item.file = nil
+	//file.Close()
+	//if item.err != nil {
+	//	panic("postJob: " + fmt.Sprint(err))
+	//}
 }
 
 func ftpTest() {
@@ -82,7 +147,6 @@ func ftpTest() {
 	// }
 
 	c.Quit()
-
 }
 
 func onDraw() {
@@ -141,8 +205,50 @@ func onPressMouseUp() {
 }
 
 func onDropFile() {
-	lbFiles.AddItem(sui.DropFile(), nil)
+	item := &ftpItem{}
+	item.filename = sui.DropFile()
+	item.active = true
+
+	lbFiles.AddItem(fmt.Sprint(item.active, " ", item.filename), item)
 	files = append(files, sui.DropFile())
+}
+
+func loop() {
+	sui.PostUpdate()
+	items := lbFiles.Items()
+	nJobs := 0
+	for i := range items {
+		item := items[i].Data.(*ftpItem)
+		if item.working {
+			nJobs++
+		}
+		percents := 0
+		if item.file != nil && item.working {
+			stat, err := item.file.Stat()
+			if err != nil {
+				fmt.Println("draw stat err: ", err)
+			} else {
+				fmt.Printf("draw size %d\n", stat.Size())
+				item.byteSent, _ = item.file.Seek(0, 1)
+				percents = int(item.byteSent * 100 / stat.Size())
+			}
+		}
+		items[i].Name = fmt.Sprint(percents, item.active, item.working, item.byteSent, " ", item.filename)
+	}
+	if nJobs >= numThreads {
+		return
+	}
+	for i := range items {
+		item := items[i].Data.(*ftpItem)
+		if !item.working && item.active {
+			item.working = true
+			ftpStartJob(item)
+		}
+		items[i].Name = fmt.Sprint(item.active, item.working, item.byteSent, " ", item.filename)
+	}
+
+	//fmt.Print("x")
+	sui.PostUpdate()
 }
 
 func main() {
@@ -321,6 +427,14 @@ func main() {
 	root.AddChild(panel)
 	fmt.Println(root)
 	*/
+
+	ftpConn, err = ftpInit()
+	defer ftpClose(ftpConn)
+	if err != nil {
+		panic(err)
+	}
+
+	sui.OnLoop = loop
 
 	sui.Run()
 

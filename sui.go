@@ -10,6 +10,8 @@ import (
 
 import "C"
 
+var OnLoop func()
+
 var glob struct {
 	rootWindows        []*RootWindow
 	needUpdate         bool
@@ -125,10 +127,10 @@ func Run() int {
 	//for event := sdl.PollEvent(); event != nil || !quit; event = sdl.PollEvent() {
 	for {
 		event := sdl.PollEvent()
-		if event == nil {
+		/*if event == nil {
 			time.Sleep(1)
 			continue
-		}
+		}*/
 
 		switch t := event.(type) {
 		case *sdl.QuitEvent:
@@ -238,6 +240,8 @@ func Run() int {
 			break
 		}
 
+		callback(OnLoop)
+
 		if glob.needUpdate {
 			for _, root := range glob.rootWindows {
 				root.Repaint()
@@ -245,6 +249,8 @@ func Run() int {
 			}
 			glob.needUpdate = false
 		}
+
+		time.Sleep(1)
 	}
 
 	fmt.Printf("done.")

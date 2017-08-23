@@ -60,6 +60,10 @@ func (o *ListBox) AddItem(str string, data interface{}) {
 	sui.PostUpdate()
 }
 
+func (o *ListBox) Items() []listBoxItem {
+	return o.items
+}
+
 func mouseClick() {
 	o := sui.Sender().(*ListBox)
 	isShift := sui.ModShift() != 0
