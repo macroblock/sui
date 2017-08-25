@@ -172,7 +172,7 @@ func loop() {
 		item := items[i].Data.(*ftpItem)
 		if item.ReadyToWork() {
 			item.working = true
-			item.StartJob()
+			//item.StartJob()
 			return
 		}
 		//items[i].Name = fmt.Sprint(item.active, item.working, item.bytesSent, " ", item.filename)
