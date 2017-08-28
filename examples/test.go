@@ -193,7 +193,7 @@ func deleteFtpItem(items []listBoxItem, i int) []listBoxItem {
 	} else {
 		items = append(items[:i], items[i+1:]...)
 	}
-	fmt.Println("\nout: ", i, "\n", items)
+	//fmt.Println("\nout: ", i, "\n", items)
 	return items
 }
 
@@ -223,28 +223,14 @@ func onKeyPress() {
 		lbFiles.itemIndex--
 		lbFiles.itemIndex = sui.MaxInt(0, lbFiles.itemIndex)
 		lbFiles.itemIndex = sui.MinInt(len(lbFiles.Items())-1, lbFiles.itemIndex)
-
-		if lbFiles.offset > lbFiles.itemIndex {
-			lbFiles.offset = sui.MaxInt(0, lbFiles.itemIndex)
-		}
-		if lbFiles.offset+lbFiles.Size().Y/itemHeight-1 < lbFiles.itemIndex {
-			lbFiles.offset = lbFiles.itemIndex - lbFiles.Size().Y/itemHeight + 1
-			lbFiles.offset = sui.MinInt(len(lbFiles.Items())-1, lbFiles.offset)
-		}
+		lbFiles.CalcOffset()
 		sui.PostUpdate()
 	case sdl.K_DOWN:
 		fmt.Println("key DOWN")
 		lbFiles.itemIndex++
 		lbFiles.itemIndex = sui.MaxInt(0, lbFiles.itemIndex)
 		lbFiles.itemIndex = sui.MinInt(len(lbFiles.Items())-1, lbFiles.itemIndex)
-
-		if lbFiles.offset > lbFiles.itemIndex {
-			lbFiles.offset = sui.MaxInt(0, lbFiles.itemIndex)
-		}
-		if lbFiles.offset+lbFiles.Size().Y/itemHeight-1 < lbFiles.itemIndex {
-			lbFiles.offset = lbFiles.itemIndex - lbFiles.Size().Y/itemHeight + 1
-			lbFiles.offset = sui.MinInt(len(lbFiles.Items())-1, lbFiles.offset)
-		}
+		lbFiles.CalcOffset()
 		sui.PostUpdate()
 	}
 }
@@ -252,7 +238,10 @@ func onKeyPress() {
 func onDropFile() {
 	item := NewFtpItem(sui.DropFile())
 	lbFiles.AddItem(fmt.Sprint(item.stopped, " ", item.filename), item)
-	files = append(files, sui.DropFile())
+	lbFiles.itemIndex = len(lbFiles.items) - 1
+	lbFiles.CalcOffset()
+	sui.PostUpdate()
+	//files = append(files, sui.DropFile())
 }
 
 func onMouseClick() {

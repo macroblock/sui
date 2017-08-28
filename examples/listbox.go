@@ -64,6 +64,16 @@ func (o *ListBox) Items() []listBoxItem {
 	return o.items
 }
 
+func (o *ListBox) CalcOffset() {
+	if o.offset > o.itemIndex {
+		o.offset = sui.MaxInt(0, o.itemIndex)
+	}
+	if o.offset+o.Size().Y/itemHeight-1 < o.itemIndex {
+		o.offset = o.itemIndex - o.Size().Y/itemHeight + 1
+		o.offset = sui.MinInt(len(o.items)-1, o.offset)
+	}
+}
+
 func mouseClick() {
 	o := sui.Sender().(*ListBox)
 	isShift := sui.ModShift() != 0
