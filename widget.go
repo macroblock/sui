@@ -31,6 +31,7 @@ type Box struct {
 	OnMouseClick      func()
 	OnMouseOver       func()
 	OnMouseScroll     func()
+	OnKeyPress        func()
 }
 
 func NewBox(w, h int) *Box {
@@ -169,6 +170,10 @@ func (o *Box) mouseOver() {
 }
 func (o *Box) mouseScroll() {
 	callback(o.OnMouseScroll)
+}
+
+func (o *Box) keyPress() {
+	callback(o.OnKeyPress)
 }
 
 func (o *Box) Move(x, y int) {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jlaffaye/ftp"
+	"github.com/veandco/go-sdl2/sdl"
 
 	"github.com/macroblock/sui"
 )
@@ -53,7 +54,7 @@ func ftpClose(c *ftp.ServerConn) {
 
 type ftpItem struct {
 	filename  string
-	active    bool
+	stopped   bool
 	working   bool
 	done      bool
 	bytesSent int64
@@ -65,7 +66,6 @@ type ftpItem struct {
 func NewFtpItem(name string) *ftpItem {
 	item := &ftpItem{}
 	item.filename = name
-	item.active = true
 	return item
 }
 
@@ -127,7 +127,7 @@ func (o *ftpItem) WorkingOne() int {
 }
 
 func (o *ftpItem) ReadyToWork() bool {
-	if !o.working && o.active {
+	if !o.working && !o.stopped {
 		return true
 	}
 	return false
@@ -149,7 +149,7 @@ func (o *ftpItem) StartJob() {
 }
 
 func (o *ftpItem) job() {
-	o.active = false
+	o.stopped = true
 	o.InitLocalFile()
 	o.InitRemoteFile()
 	o.Stor()
@@ -163,7 +163,7 @@ func loop() {
 		item := items[i].Data.(*ftpItem)
 		numWorkers += item.WorkingOne()
 		percents := int(item.FilePos() * 100 / item.FileSize())
-		items[i].Name = fmt.Sprint(percents, item.active, item.working, " ", item.filename)
+		items[i].Name = fmt.Sprint(percents, item.stopped, item.working, " ", item.filename)
 	}
 	if numWorkers >= numThreads {
 		return
@@ -179,9 +179,79 @@ func loop() {
 	}
 }
 
+func deleteFtpItem(items []listBoxItem, i int) []listBoxItem {
+	if i < 0 && i >= len(items) {
+		panic("delete index wrong")
+	}
+	fmt.Println("\nin: ", i, "\n", items)
+	item := items[i].Data.(*ftpItem)
+	item.Close()
+	if i == 0 {
+		items = items[1:]
+	} else if i == len(items)-1 {
+		items = items[:i]
+	} else {
+		items = append(items[:i], items[i+1:]...)
+	}
+	fmt.Println("\nout: ", i, "\n", items)
+	return items
+}
+
+func onKeyPress() {
+	switch sui.KeySym() {
+	case sdl.K_DELETE:
+		items := lbFiles.Items()
+		for i := 0; i < len(items); {
+			if items[i].Selected || i == lbFiles.itemIndex {
+				items = deleteFtpItem(items, i)
+				lbFiles.itemIndex = -1
+				lbFiles.items = items
+				sui.PostUpdate()
+			} else {
+				i++
+			}
+		}
+	case sdl.K_HOME, sdl.K_LEFT:
+		lbFiles.itemIndex = sui.MinInt(0, len(lbFiles.Items())-1)
+		lbFiles.offset = 0
+		sui.PostUpdate()
+	case sdl.K_END, sdl.K_RIGHT:
+		lbFiles.itemIndex = len(lbFiles.Items()) - 1
+		lbFiles.offset = sui.MaxInt(0, lbFiles.itemIndex-lbFiles.Size().Y/itemHeight+1)
+		sui.PostUpdate()
+	case sdl.K_UP:
+		lbFiles.itemIndex--
+		lbFiles.itemIndex = sui.MaxInt(0, lbFiles.itemIndex)
+		lbFiles.itemIndex = sui.MinInt(len(lbFiles.Items())-1, lbFiles.itemIndex)
+
+		if lbFiles.offset > lbFiles.itemIndex {
+			lbFiles.offset = sui.MaxInt(0, lbFiles.itemIndex)
+		}
+		if lbFiles.offset+lbFiles.Size().Y/itemHeight-1 < lbFiles.itemIndex {
+			lbFiles.offset = lbFiles.itemIndex - lbFiles.Size().Y/itemHeight + 1
+			lbFiles.offset = sui.MinInt(len(lbFiles.Items())-1, lbFiles.offset)
+		}
+		sui.PostUpdate()
+	case sdl.K_DOWN:
+		fmt.Println("key DOWN")
+		lbFiles.itemIndex++
+		lbFiles.itemIndex = sui.MaxInt(0, lbFiles.itemIndex)
+		lbFiles.itemIndex = sui.MinInt(len(lbFiles.Items())-1, lbFiles.itemIndex)
+
+		if lbFiles.offset > lbFiles.itemIndex {
+			lbFiles.offset = sui.MaxInt(0, lbFiles.itemIndex)
+		}
+		if lbFiles.offset+lbFiles.Size().Y/itemHeight-1 < lbFiles.itemIndex {
+			lbFiles.offset = lbFiles.itemIndex - lbFiles.Size().Y/itemHeight + 1
+			lbFiles.offset = sui.MinInt(len(lbFiles.Items())-1, lbFiles.offset)
+		}
+		sui.PostUpdate()
+	}
+}
+
 func onDropFile() {
 	item := NewFtpItem(sui.DropFile())
-	lbFiles.AddItem(fmt.Sprint(item.active, " ", item.filename), item)
+	lbFiles.AddItem(fmt.Sprint(item.stopped, " ", item.filename), item)
 	files = append(files, sui.DropFile())
 }
 
@@ -229,6 +299,7 @@ func main() {
 	root.OnMouseOver = onMouseOver
 	root.OnMouseButtonDown = onPressMouseDown
 	root.OnMouseButtonUp = onPressMouseUp
+	root.OnKeyPress = onKeyPress
 	//root.OnMouseClick = onMouseClick
 
 	btnInc := sui.NewBox(40, 35)

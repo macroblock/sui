@@ -41,6 +41,7 @@ type Widget interface {
 	//MouseDoubleClick(x, y int32)
 	mouseOver()
 	mouseScroll()
+	keyPress()
 	//KeyDown(key sdl.Keycode, mod uint16)
 	//KeyUp(key sdl.Keycode, mod uint16)
 	//DragMove(x, y int32, payload DragPayload)

@@ -26,6 +26,7 @@ var glob struct {
 	dropFile           string
 	modShift           int
 	mouseButton        int
+	keysym             int
 }
 
 // Init ...
@@ -114,6 +115,10 @@ func ModShift() int {
 
 func MouseButton() int {
 	return glob.mouseButton
+}
+
+func KeySym() int {
+	return glob.keysym
 }
 
 func DropFile() string {
@@ -219,14 +224,19 @@ func Run() int {
 			if t.Keysym.Sym == sdl.K_LSHIFT || t.Keysym.Sym == sdl.K_RSHIFT {
 				glob.modShift = 1
 			}
-			//fmt.Println(glob.modShift)
+			//fmt.Println("Down")
+			if t.Repeat == 0 {
+				glob.sender = glob.rootWindows[0]
+				glob.keysym = int(t.Keysym.Sym)
+				glob.sender.keyPress()
+				glob.sender = nil
+			}
 
 		case *sdl.KeyUpEvent:
-			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%x\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
 			if t.Keysym.Sym == sdl.K_LSHIFT || t.Keysym.Sym == sdl.K_RSHIFT {
 				glob.modShift = 0
 			}
-			//fmt.Println(glob.modShift)
 
 		case *sdl.DropEvent:
 			glob.dropFile = C.GoString((*C.char)(t.File))
