@@ -184,8 +184,11 @@ func deleteFtpItem(items []listBoxItem, i int) []listBoxItem {
 		panic("delete index wrong")
 	}
 	fmt.Println("\nin: ", i, "\n", items)
-	item := items[i].Data.(*ftpItem)
-	item.Close()
+	if items[i].Data != nil {
+		item := items[i].Data.(*ftpItem)
+		item.Close()
+		items[i].Data = nil
+	}
 	if i == 0 {
 		items = items[1:]
 	} else if i == len(items)-1 {
@@ -233,6 +236,39 @@ func onKeyPress() {
 		lbFiles.CalcOffset()
 		sui.PostUpdate()
 	}
+}
+
+func moveToTop(toTop bool) {
+	items := lbFiles.Items()
+	newItems := []listBoxItem{}
+	for i := range items {
+		if items[i].Selected || i == lbFiles.itemIndex {
+			p := items[i]
+			items[i].Data = nil
+			//p.Selected = false
+			newItems = append(newItems, p)
+			lbFiles.itemIndex = -1
+			lbFiles.items = items
+			sui.PostUpdate()
+		}
+	}
+	for i := 0; i < len(items); {
+		if items[i].Data == nil {
+			items = deleteFtpItem(items, i)
+		} else {
+			i++
+		}
+	}
+	itemIndex := 0
+	if toTop {
+		items = append(newItems, items...)
+	} else {
+		items = append(items, newItems...)
+		itemIndex = len(items) - 1
+	}
+	lbFiles.items = items
+	lbFiles.itemIndex = itemIndex
+	lbFiles.CalcOffset()
 }
 
 func onDropFile() {
@@ -321,7 +357,7 @@ func main() {
 
 	lblNumThreads := sui.NewBox(40, 35)
 	lblNumThreads.Move(95, 5)
-	lblNumThreads.OnMouseOver = onMouseOver
+	//lblNumThreads.OnMouseOver = onMouseOver
 	lblNumThreads.OnDraw = func() {
 		o := sui.Sender()
 		o.Clear()
@@ -352,6 +388,7 @@ func main() {
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
 	}
 	btnMoveToTop.OnMouseClick = func() {
+		moveToTop(true)
 		sui.PostUpdate()
 	}
 
@@ -365,6 +402,7 @@ func main() {
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
 	}
 	btnMoveToBottom.OnMouseClick = func() {
+		moveToTop(false)
 		sui.PostUpdate()
 	}
 
@@ -385,6 +423,28 @@ func main() {
 	lbFiles.Move(5, 45)
 	lbFiles.OnMouseOver = onMouseOver
 
+	fInfo := sui.NewBox(790, 195)
+	fInfo.Move(5, 400)
+	fInfo.OnDraw = func() {
+		o := sui.Sender()
+		o.Clear()
+		o.WriteText(sui.NewPoint(5, 5), "Info")
+		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
+	}
+
+	root.OnResize = func() {
+		size := root.Size()
+		w := size.X - 10
+		h := size.Y - 250
+		lbFiles.Resize(w, h)
+		x := 5
+		y := size.Y - 200
+		w = size.X - 10
+		h = 195
+		fInfo.Move(x, y)
+		fInfo.Resize(w, h)
+	}
+
 	root.AddChild(btnInc)
 	root.AddChild(btnDec)
 	root.AddChild(lblNumThreads)
@@ -393,6 +453,7 @@ func main() {
 	root.AddChild(btnMoveToTop)
 	root.AddChild(btnMoveToBottom)
 	root.AddChild(lbFiles)
+	root.AddChild(fInfo)
 
 	/*panel := sui.NewBox(500, 180)
 	panel.Move(20, 400)

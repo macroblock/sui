@@ -32,6 +32,7 @@ type Box struct {
 	OnMouseOver       func()
 	OnMouseScroll     func()
 	OnKeyPress        func()
+	OnResize          func()
 }
 
 func NewBox(w, h int) *Box {
@@ -203,6 +204,9 @@ func (o *Box) SetSize(size Point) {
 	o.renderer.Destroy()
 	o.renderer = renderer
 	o.size = size
+
+	callback(o.OnResize)
+
 	PostUpdate()
 }
 

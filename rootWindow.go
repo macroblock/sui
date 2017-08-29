@@ -41,6 +41,10 @@ func (o *RootWindow) UpdateSurface() {
 }
 
 func (o *RootWindow) Resize(w, h int) {
+	o.SetSize(NewPoint(w, h))
+}
+
+func (o *RootWindow) SetSize(_ Point) {
 	//fmt.Printf("sys resize: id [%d], size: %dx%d\n", o.window.GetID(), w, h)
 	sizew, sizeh := o.window.GetSize()
 	//fmt.Printf("getSize: id [%d], size: %dx%d\n", o.window.GetID(), sizew, sizeh)
@@ -56,6 +60,9 @@ func (o *RootWindow) Resize(w, h int) {
 	fmt.Printf("getRendererOutputSize: id [%d], size: %dx%d\n", o.window.GetID(), sizew, sizeh)
 
 	o.size = Point{sizew, sizeh}
+
+	callback(o.OnResize)
+
 	PostUpdate()
 }
 
