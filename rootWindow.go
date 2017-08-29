@@ -1,8 +1,6 @@
 package sui
 
 import (
-	"fmt"
-
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -57,7 +55,7 @@ func (o *RootWindow) SetSize(_ Point) {
 	__(err)
 	sizew, sizeh, err = o.renderer.GetRendererOutputSize()
 	__(err)
-	fmt.Printf("getRendererOutputSize: id [%d], size: %dx%d\n", o.window.GetID(), sizew, sizeh)
+	//fmt.Printf("getRendererOutputSize: id [%d], size: %dx%d\n", o.window.GetID(), sizew, sizeh)
 
 	o.size = Point{sizew, sizeh}
 

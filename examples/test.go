@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 const (
 	minThreads = 1
 	maxThreads = 50
+	tempExt    = ".part"
 )
 
 var (
@@ -53,14 +55,15 @@ func ftpClose(c *ftp.ServerConn) {
 }
 
 type ftpItem struct {
+	c         *ftp.ServerConn
 	filename  string
 	stopped   bool
 	working   bool
 	done      bool
 	bytesSent int64
 	file      *os.File
-	fileSize  int64
-	err       error
+	//fileSize int64
+	err error
 }
 
 func NewFtpItem(name string) *ftpItem {
@@ -75,28 +78,43 @@ func (o *ftpItem) Close() {
 	}
 }
 
+func (o *ftpItem) Read(p []byte) (int, error) {
+	n, err := o.file.Read(p)
+	if err == nil {
+		o.bytesSent += int64(n)
+		//fmt.Println("Read", n, "bytes for a total of", pt.total)
+	}
+
+	return n, err
+}
+
 func (o *ftpItem) InitLocalFile() {
 	if o.err != nil {
+		fmt.Println("init local: was error")
 		return
 	}
-	o.bytesSent = 0
+	//o.bytesSent = 0
 	file, err := os.Open(o.filename)
 	if err != nil {
 		o.err = err
 		return
 	}
-	stat, err := file.Stat()
-	if err != nil {
-		file.Close()
-		o.err = err
-		return
-	}
-	o.fileSize = stat.Size()
+	fmt.Println("open ok")
+	//stat, err := file.Stat()
+	// if err != nil {
+	// 	file.Close()
+	// 	file = nil
+	// 	o.err = err
+	// 	return
+	// }
+	//fmt.Println("stat ok")
+	//o.fileSize = stat.Size()
 	o.file = file
 }
 
 func (o *ftpItem) InitRemoteFile() {
 	if o.err != nil {
+		fmt.Println("init remote: was error")
 		return
 	}
 }
@@ -105,22 +123,28 @@ func (o *ftpItem) FileSize() int64 {
 	if o.file == nil {
 		return -1
 	}
-	return o.fileSize
+	size, err := o.file.Seek(0, 2)
+	if err != nil {
+		size = -1
+	}
+	return size
 }
 
 func (o *ftpItem) FilePos() int64 {
 	if o.file == nil {
-		return 0
+		//fmt.Println("error filePos")
+		return -1
 	}
 	pos, err := o.file.Seek(0, 1)
 	if err != nil {
-		pos = 0
+		//fmt.Println("error filePos")
+		pos = -1
 	}
 	return pos
 }
 
 func (o *ftpItem) WorkingOne() int {
-	if o.working && o.file != nil {
+	if o.working { // && o.file != nil {
 		return 1
 	}
 	return 0
@@ -135,9 +159,14 @@ func (o *ftpItem) ReadyToWork() bool {
 
 func (o *ftpItem) Stor() {
 	if o.err != nil {
+		fmt.Println("stor: was error")
 		return
 	}
-	o.err = ftpConn.StorFrom("/master/temp/xxx", o.file, 0)
+	fname := filepath.Base(o.filename)
+	fmt.Println(fname)
+
+	o.err = o.c.StorFrom("/master/temp/"+fname+tempExt, o, 0)
+	fmt.Println("after stor: " + fmt.Sprintf("%v", o.err))
 }
 
 func (o *ftpItem) StartJob() {
@@ -150,9 +179,15 @@ func (o *ftpItem) StartJob() {
 
 func (o *ftpItem) job() {
 	o.stopped = true
+	o.c, o.err = ftpInit()
+	defer o.c.Quit()
+
 	o.InitLocalFile()
 	o.InitRemoteFile()
 	o.Stor()
+	fmt.Println("job done.")
+	//o.file.Close()
+	o.working = false
 }
 
 func loop() {
@@ -162,9 +197,11 @@ func loop() {
 	for i := range items {
 		item := items[i].Data.(*ftpItem)
 		numWorkers += item.WorkingOne()
-		percents := int(item.FilePos() * 100 / item.FileSize())
-		items[i].Name = fmt.Sprint(percents, item.stopped, item.working, " ", item.filename)
+		//percents := int(item.FilePos() * 100 / item.FileSize())
+		percents := 0
+		items[i].Name = fmt.Sprint(percents, item.stopped, item.working, item.bytesSent, " ", item.filename)
 	}
+	//fmt.Println("numWorkers:", numWorkers)
 	if numWorkers >= numThreads {
 		return
 	}
@@ -172,7 +209,7 @@ func loop() {
 		item := items[i].Data.(*ftpItem)
 		if item.ReadyToWork() {
 			item.working = true
-			//item.StartJob()
+			item.StartJob() //!!!!!!!
 			return
 		}
 		//items[i].Name = fmt.Sprint(item.active, item.working, item.bytesSent, " ", item.filename)
@@ -181,9 +218,9 @@ func loop() {
 
 func deleteFtpItem(items []listBoxItem, i int) []listBoxItem {
 	if i < 0 && i >= len(items) {
-		panic("delete index wrong")
+		panic("trying delete wrong index")
 	}
-	fmt.Println("\nin: ", i, "\n", items)
+	//fmt.Println("\nin: ", i, "\n", items)
 	if items[i].Data != nil {
 		item := items[i].Data.(*ftpItem)
 		item.Close()
@@ -229,7 +266,7 @@ func onKeyPress() {
 		lbFiles.CalcOffset()
 		sui.PostUpdate()
 	case sdl.K_DOWN:
-		fmt.Println("key DOWN")
+		//fmt.Println("key DOWN")
 		lbFiles.itemIndex++
 		lbFiles.itemIndex = sui.MaxInt(0, lbFiles.itemIndex)
 		lbFiles.itemIndex = sui.MinInt(len(lbFiles.Items())-1, lbFiles.itemIndex)
@@ -282,7 +319,7 @@ func onDropFile() {
 
 func onMouseClick() {
 	o := sui.Sender()
-	fmt.Println("!!!!!!!! MouseClick: ", o)
+	//fmt.Println("!!!!!!!! MouseClick: ", o)
 	o.SetClearColor(sui.Palette.BackgroundLo)
 }
 
@@ -297,13 +334,13 @@ func onMouseOver() {
 }
 
 func onPressMouseDown() {
-	o := sui.Sender()
-	fmt.Println("MousePressDown: ", o)
+	//o := sui.Sender()
+	//fmt.Println("MousePressDown: ", o)
 }
 
 func onPressMouseUp() {
-	o := sui.Sender()
-	fmt.Println("MousePressUp: ", o)
+	//o := sui.Sender()
+	//fmt.Println("MousePressUp: ", o)
 }
 
 func main() {
@@ -428,7 +465,32 @@ func main() {
 	fInfo.OnDraw = func() {
 		o := sui.Sender()
 		o.Clear()
-		o.WriteText(sui.NewPoint(5, 5), "Info")
+		y := 5
+		dy := itemHeight
+		o.WriteText(sui.NewPoint(5, y), "Info")
+		if lbFiles.itemIndex > -1 && lbFiles.items[lbFiles.itemIndex].Data != nil {
+			item := lbFiles.items[lbFiles.itemIndex].Data.(*ftpItem)
+			y += dy
+			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("Filename: %s", item.filename))
+			y += dy
+			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("File: %v", item.file))
+			y += dy
+			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("Bytes sent: %v", item.FilePos()))
+			y += dy
+			s := "waiting"
+			if item.working {
+				s = "transfering"
+			}
+			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("Action: %s", s))
+			y += dy
+			s = "active"
+			if item.stopped {
+				s = "stopped"
+			}
+			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("Status: %s", s))
+			y += dy
+			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("Last error: %v", item.err))
+		}
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
 	}
 
@@ -509,11 +571,11 @@ func main() {
 	fmt.Println(root)
 	*/
 
-	ftpConn, err = ftpInit()
-	defer ftpClose(ftpConn)
-	if err != nil {
-		panic(err)
-	}
+	// ftpConn, err = ftpInit()
+	// defer ftpClose(ftpConn)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	sui.OnLoop = loop
 

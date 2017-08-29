@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/macroblock/sui"
 )
 
@@ -77,7 +75,7 @@ func (o *ListBox) CalcOffset() {
 func mouseClick() {
 	o := sui.Sender().(*ListBox)
 	isShift := sui.ModShift() != 0
-	fmt.Println(isShift)
+	//fmt.Println(isShift)
 	index := o.offset + sui.MousePos().Y/itemHeight
 	if index >= len(o.items) {
 		return

@@ -149,12 +149,12 @@ func Run() int {
 					if glob.prevFocus != nil {
 						glob.sender = glob.prevFocus
 						glob.prevFocus.leave()
-						fmt.Println("leave")
+						//fmt.Println("leave")
 					}
 					if glob.focus != nil {
 						glob.sender = glob.focus
 						glob.focus.enter()
-						fmt.Println("enter: ", glob.focus)
+						//fmt.Println("enter: ", glob.focus)
 					}
 					glob.prevFocus = glob.focus
 				}
@@ -207,7 +207,7 @@ func Run() int {
 		case *sdl.WindowEvent:
 			switch t.Event {
 			case sdl.WINDOWEVENT_RESIZED:
-				fmt.Printf("WINDOWEVENT RESIZED: id [%d], size: %dx%d\n", t.WindowID, t.Data1, t.Data2)
+				//fmt.Printf("WINDOWEVENT RESIZED: id [%d], size: %dx%d\n", t.WindowID, t.Data1, t.Data2)
 				for _, root := range glob.rootWindows {
 					root.Resize(int(t.Data1), int(t.Data2))
 				}
@@ -217,7 +217,7 @@ func Run() int {
 			}
 
 		case *sdl.KeyDownEvent:
-			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+			//fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
 			if t.Keysym.Sym == sdl.K_ESCAPE {
 				quit = true
 			}
@@ -233,14 +233,14 @@ func Run() int {
 			}
 
 		case *sdl.KeyUpEvent:
-			fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%x\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+			//fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%x\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
 			if t.Keysym.Sym == sdl.K_LSHIFT || t.Keysym.Sym == sdl.K_RSHIFT {
 				glob.modShift = 0
 			}
 
 		case *sdl.DropEvent:
 			glob.dropFile = C.GoString((*C.char)(t.File))
-			fmt.Println(glob.dropFile)
+			//fmt.Println(glob.dropFile)
 			glob.rootWindows[0].dropFile()
 			glob.dropFile = ""
 			PostUpdate()
@@ -260,7 +260,7 @@ func Run() int {
 			glob.needUpdate = false
 		}
 
-		time.Sleep(1)
+		time.Sleep(20)
 	}
 
 	fmt.Printf("done.")
