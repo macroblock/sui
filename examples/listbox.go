@@ -1,6 +1,9 @@
 package main
 
 import (
+	"path/filepath"
+	"strconv"
+
 	"github.com/macroblock/sui"
 )
 
@@ -107,6 +110,28 @@ func mouseScroll() {
 	sui.PostUpdate()
 }
 
+func drawItem(rect sui.Rect, item *ftpItem) {
+	o := sui.Sender().(*ListBox)
+	textColor := o.TextColor()
+	pos := rect.Pos
+	pos.X += 5
+	if item.working {
+		o.WriteText(pos, strconv.Itoa(int(item.bytesSent*100/item.bytesSent))+"%%")
+	}
+	pos.X += 30
+	if item.err == nil && item.oldErr == nil {
+		o.SetTextColor(sui.Color32(0xff00ff00))
+	} else if item.err != nil && item.oldErr != nil {
+		o.SetTextColor(sui.Color32(0xffff0000))
+	} else {
+		o.SetTextColor(sui.Color32(0xff00ffff))
+	}
+	o.WriteText(pos, "o")
+	pos.X += 30
+	o.SetTextColor(textColor)
+	o.WriteText(pos, filepath.Base(item.filename))
+}
+
 func draw() {
 	o := sui.Sender().(*ListBox)
 	//o.SetClearColor(sui.Color32(0xffffffff))
@@ -124,23 +149,26 @@ func draw() {
 			o.SetColor(drawColor)
 			o.Fill(rect)
 			o.SetColor(clearColor)
-			o.Rect(rect)
+			//o.Rect(rect)
 			o.SetTextColor(clearColor)
-			o.WriteText(pos, o.items[i].Name)
+			//o.WriteText(pos, o.items[i].Name)
+			drawItem(rect, o.items[i].Data.(*ftpItem))
 		} else if o.items[i].Selected {
 			o.SetColor(sui.Palette.SelectedItemBg)
 			o.Fill(rect)
 			o.SetColor(clearColor)
-			o.Rect(rect)
+			//o.Rect(rect)
 			o.SetTextColor(clearColor)
-			o.WriteText(pos, o.items[i].Name)
+			//o.WriteText(pos, o.items[i].Name)
+			drawItem(rect, o.items[i].Data.(*ftpItem))
 		} else {
 			o.SetColor(clearColor)
 			o.Fill(rect)
 			o.SetColor(drawColor)
-			o.Rect(rect)
+			//o.Rect(rect)
 			o.SetTextColor(textColor)
-			o.WriteText(pos, o.items[i].Name)
+			//o.WriteText(pos, o.items[i].Name)
+			drawItem(rect, o.items[i].Data.(*ftpItem))
 		}
 		pos.Y += itemHeight
 	}

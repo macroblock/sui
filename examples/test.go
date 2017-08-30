@@ -280,7 +280,7 @@ func loop() {
 	for i := range items {
 		item := items[i].Data.(*ftpItem)
 		if item.ReadyToWork() {
-			item.StartJob()
+			//item.StartJob()
 			return
 		}
 	}
@@ -411,6 +411,16 @@ func onMouseOver() {
 	}
 }
 
+func onMouseOverPassive() {
+	x := sui.MouseOver()
+	if x != nil && x != root {
+		x.SetClearColor(sui.Palette.Background)
+	}
+	if sui.PrevMouseOver() != nil && sui.PrevMouseOver() != root {
+		sui.PrevMouseOver().SetClearColor(sui.Palette.Background)
+	}
+}
+
 func onPressMouseDown() {
 	//o := sui.Sender()
 	//fmt.Println("MousePressDown: ", o)
@@ -422,7 +432,7 @@ func onPressMouseUp() {
 }
 
 func main() {
-	fmt.Println(ftpUser + ":" + ftpPassword + "@ftp://" + ftpHost + ":" + strconv.Itoa(ftpPort))
+	//fmt.Println(ftpUser + ":" + ftpPassword + "@ftp://" + ftpHost + ":" + strconv.Itoa(ftpPort))
 	//ftpTest()
 	err := sui.Init()
 	defer sui.Close()
@@ -472,7 +482,7 @@ func main() {
 
 	lblNumThreads := sui.NewBox(40, 35)
 	lblNumThreads.Move(95, 5)
-	//lblNumThreads.OnMouseOver = onMouseOver
+	lblNumThreads.OnMouseOver = onMouseOverPassive
 	lblNumThreads.OnDraw = func() {
 		o := sui.Sender()
 		o.Clear()
@@ -506,7 +516,7 @@ func main() {
 	btnPlay.OnDraw = func() {
 		o := sui.Sender()
 		o.Clear()
-		o.WriteText(sui.NewPoint(5, 5), "Play")
+		o.WriteText(sui.NewPoint(5, 5), "Start")
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
 	}
 	btnPlay.OnMouseClick = func() {
@@ -554,6 +564,7 @@ func main() {
 
 	fInfo := sui.NewBox(790, 195)
 	fInfo.Move(5, 400)
+	fInfo.OnMouseOver = onMouseOverPassive
 	fInfo.OnDraw = func() {
 		o := sui.Sender()
 		o.Clear()
@@ -612,66 +623,6 @@ func main() {
 	root.AddChild(btnMoveToBottom)
 	root.AddChild(lbFiles)
 	root.AddChild(fInfo)
-
-	/*panel := sui.NewBox(500, 180)
-	panel.Move(20, 400)
-	//panel.SetClearColor(sui.Color32(0xffff000))
-	panel.OnDraw = onDraw
-	//panel.OnEnter = onEnter
-	//panel.OnLeave = onLeave
-	panel.OnMouseOver = onMouseOver
-	panel.OnMouseButtonDown = onPressMouseDown
-	panel.OnMouseButtonUp = onPressMouseUp
-	panel.OnMouseClick = onMouseClick
-	root.AddChild(panel)
-	fmt.Println(root)
-
-	panel = sui.NewBox(250, 140)
-	panel.Move(40, 420)
-	//panel.SetClearColor(sui.Color32(0xff00ff00))
-	panel.OnDraw = onDraw
-	//panel.OnEnter = onEnter
-	//panel.OnLeave = onLeave
-	panel.OnMouseOver = onMouseOver
-	panel.OnMouseButtonDown = onPressMouseDown
-	panel.OnMouseButtonUp = onPressMouseUp
-	panel.OnMouseClick = onMouseClick
-	root.AddChild(panel)
-	fmt.Println(root)
-
-	panel = sui.NewBox(200, 100)
-	panel.Move(60, 440)
-	//panel.SetClearColor(sui.Color32(0xff0000ff))
-	panel.OnDraw = onDraw
-	//panel.OnEnter = onEnter
-	//panel.OnLeave = onLeave
-	panel.OnMouseOver = onMouseOver
-	panel.OnMouseButtonDown = onPressMouseDown
-	panel.OnMouseButtonUp = onPressMouseUp
-	panel.OnMouseClick = onMouseClick
-	root.AddChild(panel)
-	fmt.Println(root)
-	//_ = sui.NewSystemWindow("test", 800, 600)
-
-	panel = sui.NewBox(200, 180)
-	panel.Move(540, 400)
-	//panel.SetClearColor(sui.Color32(0xffff000))
-	panel.OnDraw = onDraw
-	//panel.OnEnter = onEnter
-	//panel.OnLeave = onLeave
-	panel.OnMouseOver = onMouseOver
-	panel.OnMouseButtonDown = onPressMouseDown
-	panel.OnMouseButtonUp = onPressMouseUp
-	panel.OnMouseClick = onMouseClick
-	root.AddChild(panel)
-	fmt.Println(root)
-	*/
-
-	// ftpConn, err = ftpInit()
-	// defer ftpClose(ftpConn)
-	// if err != nil {
-	// 	panic(err)
-	// }
 
 	sui.OnLoop = loop
 
