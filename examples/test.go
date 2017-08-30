@@ -572,7 +572,7 @@ func main() {
 		dy := itemHeight
 		if lbFiles.itemIndex > -1 && lbFiles.items[lbFiles.itemIndex].Data != nil {
 			item := lbFiles.items[lbFiles.itemIndex].Data.(*ftpItem)
-			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("Filename: %s", item.filename))
+			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("►■ТестёFilename: %s", item.filename))
 			y += dy
 			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("File: %v", item.file))
 			y += dy
