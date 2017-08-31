@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -280,7 +281,7 @@ func loop() {
 	for i := range items {
 		item := items[i].Data.(*ftpItem)
 		if item.ReadyToWork() {
-			//item.StartJob()
+			item.StartJob()
 			return
 		}
 	}
@@ -321,6 +322,8 @@ func onKeyPress() {
 				i++
 			}
 		}
+		writeFtpItems()
+
 	case sdl.K_HOME, sdl.K_LEFT:
 		lbFiles.itemIndex = sui.MinInt(0, len(lbFiles.Items())-1)
 		lbFiles.offset = 0
@@ -376,6 +379,7 @@ func moveTo(toTop bool) {
 	lbFiles.items = items
 	lbFiles.itemIndex = itemIndex
 	lbFiles.CalcOffset()
+	writeFtpItems()
 }
 
 func onDropFile() {
@@ -392,32 +396,38 @@ func onDropFile() {
 	lbFiles.itemIndex = len(lbFiles.items) - 1
 	lbFiles.CalcOffset()
 	sui.PostUpdate()
+	writeFtpItems()
 	//files = append(files, sui.DropFile())
 }
 
 func onMouseClick() {
-	o := sui.Sender()
+	//o := sui.Sender()
 	//fmt.Println("!!!!!!!! MouseClick: ", o)
-	o.SetClearColor(sui.Palette.BackgroundLo)
+	//o.SetClearColor(sui.Palette.BackgroundLo)
 }
 
 func onMouseOver() {
 	x := sui.MouseOver()
 	if x != nil && x != root {
-		x.SetClearColor(sui.Palette.BackgroundHi)
+		x.SetClearColor(sui.Palette.Active.Hi())
 	}
 	if sui.PrevMouseOver() != nil && sui.PrevMouseOver() != root {
-		sui.PrevMouseOver().SetClearColor(sui.Palette.Background)
+		if sui.PrevMouseOver().ClearColor() != sui.Palette.Passive {
+			sui.PrevMouseOver().SetClearColor(sui.Palette.Active)
+		}
 	}
 }
 
 func onMouseOverPassive() {
 	x := sui.MouseOver()
 	if x != nil && x != root {
-		x.SetClearColor(sui.Palette.Background)
+		x.SetClearColor(sui.Palette.Passive)
 	}
 	if sui.PrevMouseOver() != nil && sui.PrevMouseOver() != root {
-		sui.PrevMouseOver().SetClearColor(sui.Palette.Background)
+		if sui.PrevMouseOver().ClearColor() != sui.Palette.Passive {
+			sui.PrevMouseOver().SetClearColor(sui.Palette.Active)
+		}
+
 	}
 }
 
@@ -431,6 +441,38 @@ func onPressMouseUp() {
 	//fmt.Println("MousePressUp: ", o)
 }
 
+func readFtpItems() error {
+	file, err := os.Open("queue.lst")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	//lines := []ftpItem{}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		item := NewFtpItem(scanner.Text())
+		lbFiles.AddItem(fmt.Sprint(item.stopped, " ", item.filename), item)
+		//lines = append(lines, scanner.Text())
+	}
+	return scanner.Err()
+}
+
+// writeLines writes the lines to the given file.
+func writeFtpItems() error {
+	file, err := os.Create("queue.lst")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	w := bufio.NewWriter(file)
+	for _, item := range lbFiles.items {
+		fmt.Fprintln(w, item.Data.(*ftpItem).filename)
+	}
+	return w.Flush()
+}
+
 func main() {
 	//fmt.Println(ftpUser + ":" + ftpPassword + "@ftp://" + ftpHost + ":" + strconv.Itoa(ftpPort))
 	//ftpTest()
@@ -440,7 +482,7 @@ func main() {
 		panic(err)
 	}
 	root = sui.NewRootWindow("test", 800, 600)
-	root.SetClearColor(sui.Palette.BackgroundLo)
+	//root.SetClearColor(sui.Palette.BackgroundLo)
 	//root.SetClearColor(sui.Color32(0x00000000))
 	root.OnDropFile = onDropFile
 	//root.OnDraw = onDraw
@@ -482,6 +524,7 @@ func main() {
 
 	lblNumThreads := sui.NewBox(40, 35)
 	lblNumThreads.Move(95, 5)
+	lblNumThreads.SetClearColor(sui.Palette.Passive)
 	lblNumThreads.OnMouseOver = onMouseOverPassive
 	lblNumThreads.OnDraw = func() {
 		o := sui.Sender()
@@ -564,6 +607,7 @@ func main() {
 
 	fInfo := sui.NewBox(790, 195)
 	fInfo.Move(5, 400)
+	fInfo.SetClearColor(sui.Palette.Passive)
 	fInfo.OnMouseOver = onMouseOverPassive
 	fInfo.OnDraw = func() {
 		o := sui.Sender()
@@ -572,7 +616,7 @@ func main() {
 		dy := itemHeight
 		if lbFiles.itemIndex > -1 && lbFiles.items[lbFiles.itemIndex].Data != nil {
 			item := lbFiles.items[lbFiles.itemIndex].Data.(*ftpItem)
-			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("►■ТестёFilename: %s", item.filename))
+			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("Filename: %s", item.filename))
 			y += dy
 			o.WriteText(sui.NewPoint(10, y), fmt.Sprintf("File: %v", item.file))
 			y += dy
@@ -624,9 +668,13 @@ func main() {
 	root.AddChild(lbFiles)
 	root.AddChild(fInfo)
 
+	readFtpItems()
+
 	sui.OnLoop = loop
 
 	sui.Run()
+
+	writeFtpItems()
 
 	root.Close()
 }

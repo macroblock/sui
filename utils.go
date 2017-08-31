@@ -29,16 +29,52 @@ func (o *Point) Max(point Point) {
 }
 
 type Color struct {
+	sign int
 	sdl.Color
 }
 
-func Color32(c uint32) Color {
-	return Color{
-		sdl.Color{
-			uint8((c >> 0) & 0xff),
-			uint8((c >> 8) & 0xff),
-			uint8((c >> 16) & 0xff),
-			uint8((c >> 24) & 0xff),
+func (o Color) Hi() Color {
+	o.R += uint8(Palette.incHi.sign * int(Palette.incHi.R))
+	o.G += uint8(Palette.incHi.sign * int(Palette.incHi.G))
+	o.B += uint8(Palette.incHi.sign * int(Palette.incHi.B))
+	o.A += uint8(Palette.incHi.sign * int(Palette.incHi.A))
+	return o
+}
+
+func (o Color) Lo() Color {
+	o.R += uint8(Palette.incLo.sign * int(Palette.incHi.R))
+	o.G += uint8(Palette.incLo.sign * int(Palette.incHi.G))
+	o.B += uint8(Palette.incLo.sign * int(Palette.incHi.B))
+	o.A += uint8(Palette.incLo.sign * int(Palette.incHi.A))
+	return o
+}
+
+func Color32(c int64) Color {
+	sign := 1
+	if c < 0 {
+		sign = -1
+	}
+	return Color{sign: sign,
+		Color: sdl.Color{
+			R: uint8((c >> 0) & 0xff),
+			G: uint8((c >> 8) & 0xff),
+			B: uint8((c >> 16) & 0xff),
+			A: uint8((c >> 24) & 0xff),
+		},
+	}
+}
+
+func Color32b(c int64) Color {
+	sign := 1
+	if c < 0 {
+		sign = -1
+	}
+	return Color{sign: sign,
+		Color: sdl.Color{
+			R: uint8((c >> 24) & 0xff),
+			G: uint8((c >> 16) & 0xff),
+			B: uint8((c >> 8) & 0xff),
+			A: uint8((c >> 0) & 0xff),
 		},
 	}
 }

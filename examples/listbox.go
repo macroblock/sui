@@ -116,16 +116,19 @@ func drawItem(rect sui.Rect, item *ftpItem) {
 	pos := rect.Pos
 	pos.X += 5
 	if item.working {
-		o.WriteText(pos, strconv.Itoa(int(item.bytesSent*100/item.bytesSent))+"%%")
+		percent := -1
+		if item.fileSize != 0 {
+			percent = int(item.bytesSent * 100 / item.fileSize)
+		}
+		o.WriteText(pos, strconv.Itoa(percent)+"%")
 	}
 	pos.X += 30
 	if item.err == nil && item.oldErr == nil {
-		o.SetTextColor(sui.Color32(0xff00ff00))
-	} else if item.err != nil && item.oldErr != nil {
-		o.SetTextColor(sui.Color32(0xffff0000))
+		o.SetTextColor(sui.Palette.Info)
 	} else {
-		o.SetTextColor(sui.Color32(0xff00ffff))
+		o.SetTextColor(sui.Palette.Warning)
 	}
+
 	o.WriteText(pos, "o")
 	pos.X += 30
 	o.SetTextColor(textColor)
@@ -146,28 +149,40 @@ func draw() {
 		}
 		rect := sui.NewRect(sui.NewPoint(0, pos.Y-yOffs), sui.NewPoint(o.Size().X, itemHeight+1))
 		if i == o.itemIndex {
-			o.SetColor(drawColor)
-			o.Fill(rect)
-			o.SetColor(clearColor)
+			//o.SetColor(drawColor)
+			//o.Fill(rect)
+			//o.SetColor(clearColor)
 			//o.Rect(rect)
-			o.SetTextColor(clearColor)
+			//o.SetTextColor(clearColor)
 			//o.WriteText(pos, o.items[i].Name)
+			o.SetColor(sui.Palette.Accent)
+			o.Fill(rect)
+			o.SetColor(sui.Palette.Normal)
+			o.Rect(rect)
 			drawItem(rect, o.items[i].Data.(*ftpItem))
 		} else if o.items[i].Selected {
-			o.SetColor(sui.Palette.SelectedItemBg)
-			o.Fill(rect)
-			o.SetColor(clearColor)
-			//o.Rect(rect)
-			o.SetTextColor(clearColor)
+			// o.SetColor(sui.Palette.Select)
+			// o.Fill(rect)
+			// o.SetColor(clearColor)
+			// //o.Rect(rect)
+			// o.SetTextColor(clearColor)
 			//o.WriteText(pos, o.items[i].Name)
+			o.SetColor(sui.Palette.Select)
+			o.Fill(rect)
+			o.SetColor(sui.Palette.Normal)
+			o.Rect(rect)
 			drawItem(rect, o.items[i].Data.(*ftpItem))
 		} else {
+			// o.SetColor(clearColor)
+			// o.Fill(rect)
+			// o.SetColor(drawColor)
+			// //o.Rect(rect)
+			// o.SetTextColor(textColor)
+			// //o.WriteText(pos, o.items[i].Name)
 			o.SetColor(clearColor)
 			o.Fill(rect)
-			o.SetColor(drawColor)
-			//o.Rect(rect)
-			o.SetTextColor(textColor)
-			//o.WriteText(pos, o.items[i].Name)
+			o.SetColor(sui.Palette.Normal)
+			o.Rect(rect)
 			drawItem(rect, o.items[i].Data.(*ftpItem))
 		}
 		pos.Y += itemHeight

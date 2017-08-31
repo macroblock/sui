@@ -22,9 +22,9 @@ func NewRootWindow(title string, width, height int) *RootWindow {
 	}
 	w, h := window.GetSize()
 	root.Resize(w, h)
-	root.SetClearColor(Palette.Background)
-	root.SetColor(Palette.Foreground)
-	root.SetTextColor(Palette.Text)
+	root.SetClearColor(Palette.Passive)
+	root.SetColor(Palette.Normal)
+	root.SetTextColor(Palette.Normal)
 	root.SetFont(defaultFont)
 
 	sdl.EventState(sdl.DROPFILE, sdl.ENABLE)

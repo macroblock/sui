@@ -39,9 +39,9 @@ func NewBox(w, h int) *Box {
 	widget := &Box{}
 	//widget.init(w, h)
 	widget.Resize(w, h)
-	widget.SetClearColor(Palette.Background)
-	widget.SetColor(Palette.Foreground)
-	widget.SetTextColor(Palette.Text)
+	widget.SetClearColor(Palette.Active)
+	widget.SetColor(Palette.Normal)
+	widget.SetTextColor(Palette.Normal)
 	widget.SetFont(defaultFont)
 	return widget
 }

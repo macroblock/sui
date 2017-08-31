@@ -25,6 +25,9 @@ type Widget interface {
 	SetClearColor(color Color)
 	SetColor(color Color)
 	SetTextColor(color Color)
+	ClearColor() Color
+	Color() Color
+	TextColor() Color
 	Clear()
 	Fill(rect Rect)
 	Rect(rect Rect)
