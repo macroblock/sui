@@ -345,7 +345,7 @@ func onKeyPress() {
 	}
 }
 
-func moveToTop(toTop bool) {
+func moveTo(toTop bool) {
 	items := lbFiles.Items()
 	newItems := []listBoxItem{}
 	for i := range items {
@@ -366,7 +366,7 @@ func moveToTop(toTop bool) {
 			i++
 		}
 	}
-	itemIndex := 0
+	itemIndex := sui.MinInt(0, len(items)-1)
 	if toTop {
 		items = append(newItems, items...)
 	} else {
@@ -540,7 +540,7 @@ func main() {
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
 	}
 	btnMoveToTop.OnMouseClick = func() {
-		moveToTop(true)
+		moveTo(true)
 		sui.PostUpdate()
 	}
 
@@ -554,7 +554,7 @@ func main() {
 		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
 	}
 	btnMoveToBottom.OnMouseClick = func() {
-		moveToTop(false)
+		moveTo(false)
 		sui.PostUpdate()
 	}
 
