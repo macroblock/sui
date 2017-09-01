@@ -68,7 +68,7 @@ type ftpItem struct {
 	//fileSize int64
 	err        error
 	oldErr     error
-	bps        [100]int
+	bps        [10]int
 	currentBps int
 	prevTime   time.Time //int64
 	bpsIndex   int
@@ -139,19 +139,21 @@ func (o *ftpItem) Read(p []byte) (int, error) {
 		now := time.Now()            //getTime()
 		delta := now.Sub(o.prevTime) //now - o.prevTime
 		//o.numSent += int64(n)
-		if delta != 0 {
+		if delta >= time.Second {
 			//o.bps[o.bpsIndex] = int(o.numSent * int64(time.Second) / int64(delta))
 			o.bps[o.bpsIndex] = int(float64(o.numSent) / (float64(delta) / float64(time.Second))) // 10
-			fmt.Println("bps: ", o.bps[o.bpsIndex], n, delta)
+			//fmt.Println("bps: ", o.bps[o.bpsIndex], n, delta)
 			o.NextIndex()
 			o.numSent = 0
 			o.prevTime = now
 		} else {
-			fmt.Println("Delta is Zero", n)
+			//fmt.Println("Delta is Zero", n)
 		}
 
 		o.bytesSent += int64(n)
 		//fmt.Println("Read", n, "bytes for a total of", pt.total)
+	} else {
+		fmt.Println("read err: ", err, n)
 	}
 
 	return n, err
