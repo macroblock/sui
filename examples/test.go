@@ -66,12 +66,24 @@ type ftpItem struct {
 	bytesSent int64
 	file      *os.File
 	//fileSize int64
-	err    error
-	oldErr error
+	err        error
+	oldErr     error
+	bps        [100]int
+	currentBps int
+	prevTime   time.Time //int64
+	bpsIndex   int
+	numSent    int64
+	started    time.Time
+	completed  time.Time
+}
+
+func getTime() int64 {
+	return time.Now().UnixNano()
 }
 
 func NewFtpItem(name string) *ftpItem {
 	item := &ftpItem{}
+	item.prevTime = time.Now() //getTime()
 	item.filename = name
 	return item
 }
@@ -98,9 +110,46 @@ func (o *ftpItem) Play() {
 	}
 }
 
+func (o *ftpItem) NextIndex() {
+	o.bpsIndex++
+	o.bpsIndex %= len(o.bps)
+}
+
+func (o *ftpItem) Bps() int {
+	count := 0
+	bps := 0
+	for _, v := range o.bps {
+		if v != 0 {
+			bps += v
+			count++
+		}
+	}
+	if count == 0 {
+		o.currentBps = 0
+	} else {
+		o.currentBps = bps / count
+	}
+	return o.currentBps
+}
+
 func (o *ftpItem) Read(p []byte) (int, error) {
 	n, err := o.file.Read(p)
 	if err == nil {
+		o.numSent += int64(n)
+		now := time.Now()            //getTime()
+		delta := now.Sub(o.prevTime) //now - o.prevTime
+		//o.numSent += int64(n)
+		if delta != 0 {
+			//o.bps[o.bpsIndex] = int(o.numSent * int64(time.Second) / int64(delta))
+			o.bps[o.bpsIndex] = int(float64(o.numSent) / (float64(delta) / float64(time.Second))) // 10
+			fmt.Println("bps: ", o.bps[o.bpsIndex], n, delta)
+			o.NextIndex()
+			o.numSent = 0
+			o.prevTime = now
+		} else {
+			fmt.Println("Delta is Zero", n)
+		}
+
 		o.bytesSent += int64(n)
 		//fmt.Println("Read", n, "bytes for a total of", pt.total)
 	}
@@ -183,7 +232,13 @@ func (o *ftpItem) Stor() {
 		}
 	}
 
+	o.started = time.Now()
+
 	o.err = o.c.StorFrom(remotePath+"/"+filepath.Base(o.filename)+tempExt, o, uint64(o.bytesSent))
+
+	o.completed = time.Now()
+	fmt.Println("delta: ", o.completed.Sub(o.started))
+
 }
 
 func (o *ftpItem) PostProcess() {
@@ -212,6 +267,12 @@ func (o *ftpItem) Clean() {
 }
 
 func (o *ftpItem) StartJob() {
+	o.currentBps = 0
+	o.numSent = 0
+	o.bpsIndex = 0
+	for i := range o.bps {
+		o.bps[i] = 0
+	}
 	o.bytesSent = 0
 	o.fileSize = 1 // hack
 	o.working = true
@@ -266,13 +327,13 @@ func loop() {
 	numWorkers := 0
 	for i := range items {
 		item := items[i].Data.(*ftpItem)
-		percent := 0
+		//percent := 0
 		if item.working {
-			percent = int(item.bytesSent * 100 / item.fileSize)
+			//percent = int(item.bytesSent * 100 / item.fileSize)
 			numWorkers++
 		}
 
-		items[i].Name = fmt.Sprint(percent, item.stopped, item.working, item.bytesSent, " ", filepath.Base(item.filename))
+		//items[i].Name = fmt.Sprint(percent, item.stopped, item.working, item.bytesSent, " ", filepath.Base(item.filename))
 	}
 	if numWorkers >= numThreads {
 		return
@@ -601,6 +662,24 @@ func main() {
 		sui.PostUpdate()
 	}
 
+	infoBps := sui.NewBox(150, 35)
+	infoBps.Move(500, 5)
+	infoBps.SetClearColor(sui.Palette.Passive)
+	infoBps.OnMouseOver = onMouseOverPassive
+	infoBps.OnDraw = func() {
+		o := sui.Sender()
+		bps := 0
+		for _, i := range lbFiles.items {
+			item := i.Data.(*ftpItem)
+			if item.working {
+				bps += item.currentBps
+			}
+		}
+		o.Clear()
+		o.WriteText(sui.NewPoint(5, 5), "Speed: "+bpsToStr(bps))
+		o.Rect(sui.NewRect(sui.NewPoint(0, 0), o.Size()))
+	}
+
 	lbFiles = NewListBox(790, 350)
 	lbFiles.Move(5, 45)
 	lbFiles.OnMouseOver = onMouseOver
@@ -665,6 +744,7 @@ func main() {
 	root.AddChild(btnPlay)
 	root.AddChild(btnMoveToTop)
 	root.AddChild(btnMoveToBottom)
+	root.AddChild(infoBps)
 	root.AddChild(lbFiles)
 	root.AddChild(fInfo)
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 	"strconv"
 
@@ -110,10 +111,50 @@ func mouseScroll() {
 	sui.PostUpdate()
 }
 
+func bpsToStr(bps int) string {
+	const kilo = 1000
+	postfix := "B/s"
+	val := float64(bps)
+	if val > kilo {
+		val /= kilo
+		postfix = "KB/s"
+		if val > kilo {
+			val /= kilo
+			postfix = "MB/s"
+		}
+	}
+
+	format := "%.0f"
+	if val < 100 {
+		format = "%.1f"
+	}
+	return fmt.Sprintf(format, val) + " " + postfix
+}
+
+func secondsToStr(sec int) string {
+	ret := strconv.Itoa(sec)
+	ss := sec % 60
+	sec /= 60
+	mm := sec % 60
+	hh := sec / 60
+	_ = strconv.Itoa(hh) + ":" + strconv.Itoa(mm) + ":" + strconv.Itoa(ss)
+	return ret
+}
+
 func drawItem(rect sui.Rect, item *ftpItem) {
 	o := sui.Sender().(*ListBox)
 	textColor := o.TextColor()
+	_ = textColor
 	pos := rect.Pos
+
+	if item.err == nil && item.oldErr == nil {
+		o.SetTextColor(sui.Palette.Info)
+	} else if item.stopped {
+		o.SetTextColor(sui.Palette.Error)
+	} else {
+		o.SetTextColor(sui.Palette.Warning)
+	}
+
 	pos.X += 5
 	if item.working {
 		percent := -1
@@ -122,16 +163,20 @@ func drawItem(rect sui.Rect, item *ftpItem) {
 		}
 		o.WriteText(pos, strconv.Itoa(percent)+"%")
 	}
-	pos.X += 30
-	if item.err == nil && item.oldErr == nil {
-		o.SetTextColor(sui.Palette.Info)
-	} else {
-		o.SetTextColor(sui.Palette.Warning)
+
+	pos.X += 45
+	bps := 0
+	if item.working {
+		bps = item.Bps()
+		o.WriteText(pos, bpsToStr(bps))
+	}
+	pos.X += 100
+	if item.working && bps != 0 {
+		o.WriteText(pos, secondsToStr(int(item.fileSize-item.bytesSent)/bps))
 	}
 
-	o.WriteText(pos, "o")
-	pos.X += 30
-	o.SetTextColor(textColor)
+	pos.X += 200
+	//o.SetTextColor(textColor)
 	o.WriteText(pos, filepath.Base(item.filename))
 }
 

@@ -41,7 +41,7 @@ func NewBox(w, h int) *Box {
 	widget.Resize(w, h)
 	widget.SetClearColor(Palette.Active)
 	widget.SetColor(Palette.Normal)
-	widget.SetTextColor(Palette.Normal)
+	widget.SetTextColor(Palette.Info)
 	widget.SetFont(defaultFont)
 	return widget
 }

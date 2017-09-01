@@ -24,7 +24,7 @@ func NewRootWindow(title string, width, height int) *RootWindow {
 	root.Resize(w, h)
 	root.SetClearColor(Palette.Passive)
 	root.SetColor(Palette.Normal)
-	root.SetTextColor(Palette.Normal)
+	root.SetTextColor(Palette.Info)
 	root.SetFont(defaultFont)
 
 	sdl.EventState(sdl.DROPFILE, sdl.ENABLE)
