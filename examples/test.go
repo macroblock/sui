@@ -432,15 +432,15 @@ func moveTo(toTop bool) {
 			i++
 		}
 	}
-	itemIndex := sui.MinInt(0, len(items)-1)
+
 	if toTop {
 		items = append(newItems, items...)
+		lbFiles.itemIndex = sui.MinInt(0, len(items)-1)
 	} else {
 		items = append(items, newItems...)
-		itemIndex = len(items) - 1
+		lbFiles.itemIndex = len(items) - 1
 	}
 	lbFiles.items = items
-	lbFiles.itemIndex = itemIndex
 	lbFiles.CalcOffset()
 	writeFtpItems()
 }

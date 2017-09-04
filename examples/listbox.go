@@ -137,7 +137,7 @@ func secondsToStr(sec int) string {
 	sec /= 60
 	mm := sec % 60
 	hh := sec / 60
-	_ = strconv.Itoa(hh) + ":" + strconv.Itoa(mm) + ":" + strconv.Itoa(ss)
+	ret = fmt.Sprintf("%02d:%02d:%02d", hh, mm, ss)
 	return ret
 }
 
@@ -175,7 +175,7 @@ func drawItem(rect sui.Rect, item *ftpItem) {
 		o.WriteText(pos, secondsToStr(int(item.fileSize-item.bytesSent)/bps))
 	}
 
-	pos.X += 200
+	pos.X += 80
 	//o.SetTextColor(textColor)
 	o.WriteText(pos, filepath.Base(item.filename))
 }
