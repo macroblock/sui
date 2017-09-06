@@ -260,7 +260,7 @@ func Run() int {
 			glob.needUpdate = false
 		}
 
-		time.Sleep(20)
+		time.Sleep(20 * time.Millisecond)
 	}
 
 	fmt.Printf("done.")
