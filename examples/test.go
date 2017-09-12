@@ -190,11 +190,10 @@ func (o *ftpItem) InitRemoteFile() bool {
 	o.bytesSent = 0
 	remoteFile := remotePath + "/" + filepath.Base(o.filename)
 	if size, err := o.c.FileSize(remoteFile); err == nil {
-		o.bytesSent = size
-	}
-	// file already uploaded
-	if o.fileSize == o.bytesSent {
-		return true
+		// file already uploaded
+		if o.fileSize == size {
+			return true
+		}
 	}
 
 	remoteFile = remotePath + "/" + filepath.Base(o.filename) + tempExt
@@ -206,13 +205,6 @@ func (o *ftpItem) InitRemoteFile() bool {
 	return false
 }
 
-func (o *ftpItem) WorkingOne() int {
-	if o.working { // && o.file != nil {
-		return 1
-	}
-	return 0
-}
-
 func (o *ftpItem) ReadyToWork() bool {
 	if !o.working && !o.stopped && !o.done {
 		return true
@@ -222,9 +214,10 @@ func (o *ftpItem) ReadyToWork() bool {
 
 func (o *ftpItem) Stor() {
 	if o.err != nil {
-		fmt.Println("stor: was error")
+		fmt.Println("stor: was an error")
 		return
 	}
+	fmt.Println("before stor is ok")
 	if pos, err := o.file.Seek(o.bytesSent, 0); pos != o.bytesSent || err != nil {
 		o.bytesSent = 0
 		if pos, err = o.file.Seek(0, 0); pos != o.bytesSent || err != nil {
@@ -235,7 +228,7 @@ func (o *ftpItem) Stor() {
 	}
 
 	o.started = time.Now()
-
+	fmt.Println("store started: ", o.bytesSent, filepath.Base(o.filename)+tempExt)
 	o.err = o.c.StorFrom(remotePath+"/"+filepath.Base(o.filename)+tempExt, o, uint64(o.bytesSent))
 
 	o.completed = time.Now()
