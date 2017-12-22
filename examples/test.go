@@ -29,7 +29,7 @@ var (
 
 	files []string
 
-	ftpConn    *ftp.ServerConn
+	// ftpConn    *ftp.ServerConn
 	numThreads = 1
 
 	root    *sui.RootWindow
