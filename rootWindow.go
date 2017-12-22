@@ -13,7 +13,7 @@ type RootWindow struct {
 
 // NewRootWindow ...
 func NewRootWindow(title string, width, height int) *RootWindow {
-	window, err := sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, width, height, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
+	window, err := sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, int32(width), int32(height), sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
 	__(err)
 
 	root := &RootWindow{
@@ -21,7 +21,8 @@ func NewRootWindow(title string, width, height int) *RootWindow {
 		window: window,
 	}
 	w, h := window.GetSize()
-	root.Resize(w, h)
+	//root.surface, _ = root.window.GetSurface()
+	root.Resize(int(w), int(h))
 	root.SetClearColor(Palette.Passive)
 	root.SetColor(Palette.Normal)
 	root.SetTextColor(Palette.Info)
@@ -47,17 +48,18 @@ func (o *RootWindow) SetSize(_ Point) {
 	sizew, sizeh := o.window.GetSize()
 	//fmt.Printf("getSize: id [%d], size: %dx%d\n", o.window.GetID(), sizew, sizeh)
 	err := error(nil)
-	o.surface.Free()
+	//o.surface.Free()
+
 	o.surface, err = o.window.GetSurface()
 	__(err)
 	o.renderer.Destroy()
 	o.renderer, err = sdl.CreateSoftwareRenderer(o.surface)
 	__(err)
-	sizew, sizeh, err = o.renderer.GetRendererOutputSize()
+	sizew, sizeh, err = o.renderer.GetOutputSize()
 	__(err)
 	//fmt.Printf("getRendererOutputSize: id [%d], size: %dx%d\n", o.window.GetID(), sizew, sizeh)
 
-	o.size = Point{sizew, sizeh}
+	o.size = Point{int(sizew), int(sizeh)}
 
 	callback(o.OnResize)
 

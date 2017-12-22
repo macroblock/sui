@@ -216,8 +216,14 @@ func Run() int {
 				//	fmt.Printf("size changed: id [%d], size: %dx%d\n", t.WindowID, t.Data1, t.Data2)
 			}
 
-		case *sdl.KeyDownEvent:
+		case *sdl.KeyboardEvent:
 			//fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%c\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+			if t.Type == sdl.KEYUP {
+				if t.Keysym.Sym == sdl.K_LSHIFT || t.Keysym.Sym == sdl.K_RSHIFT {
+					glob.modShift = 0
+				}
+				break
+			}
 			if t.Keysym.Sym == sdl.K_ESCAPE {
 				quit = true
 			}
@@ -232,14 +238,14 @@ func Run() int {
 				glob.sender = nil
 			}
 
-		case *sdl.KeyUpEvent:
-			//fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%x\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
-			if t.Keysym.Sym == sdl.K_LSHIFT || t.Keysym.Sym == sdl.K_RSHIFT {
-				glob.modShift = 0
-			}
+		// case *sdl.KeyUpEvent:
+		// 	//fmt.Printf("[%d ms] Keyboard\ttype:%d\tsym:%x\tmodifiers:%d\tstate:%d\trepeat:%d\n", t.Timestamp, t.Type, t.Keysym.Sym, t.Keysym.Mod, t.State, t.Repeat)
+		// 	if t.Keysym.Sym == sdl.K_LSHIFT || t.Keysym.Sym == sdl.K_RSHIFT {
+		// 		glob.modShift = 0
+		// 	}
 
 		case *sdl.DropEvent:
-			glob.dropFile = C.GoString((*C.char)(t.File))
+			glob.dropFile = t.File //C.GoString((*C.char)(t.File))
 			//fmt.Println(glob.dropFile)
 			glob.rootWindows[0].dropFile()
 			glob.dropFile = ""

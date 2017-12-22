@@ -18,7 +18,7 @@ const (
 	minThreads = 1
 	maxThreads = 50
 	tempExt    = ".part"
-	remotePath = "/master" // "/temp"
+	remotePath = "/master" //"/for_ott" //"/master" // "/temp"
 )
 
 var (
@@ -537,7 +537,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	root = sui.NewRootWindow("ftp://"+ftpHost+remotePath, 800, 600)
+	root = sui.NewRootWindow("NEW MASTER ftp://"+ftpHost+remotePath, 800, 600)
 	//root.SetClearColor(sui.Palette.BackgroundLo)
 	//root.SetClearColor(sui.Color32(0x00000000))
 	root.OnDropFile = onDropFile

@@ -231,7 +231,7 @@ func (o *Box) Rect(rect Rect) {
 func (o *Box) Line(a, b Point) {
 	r := o.Renderer()
 	r.SetDrawColor(o.drawColor.RGBA())
-	r.DrawLine(a.X, a.Y, b.X, b.Y)
+	r.DrawLine(int32(a.X), int32(a.Y), int32(b.X), int32(b.Y))
 }
 
 func (o *Box) WriteText(pos Point, str string) Point {
@@ -242,7 +242,7 @@ func (o *Box) WriteText(pos Point, str string) Point {
 		return Point{0, 0}
 	}
 
-	if solid, err = o.Font().RenderUTF8_Blended(str, o.textColor.Color); err != nil {
+	if solid, err = o.Font().RenderUTF8Blended(str, o.textColor.Color); err != nil {
 		fmt.Fprint(os.Stderr, "Failed to render text: %s\n", err)
 		return Point{0, 0}
 	}
