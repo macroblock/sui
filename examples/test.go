@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/jlaffaye/ftp"
+	"github.com/pkg/sftp"
 	"github.com/veandco/go-sdl2/sdl"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/macroblock/sui"
 )
@@ -18,14 +20,15 @@ const (
 	minThreads = 1
 	maxThreads = 50
 	tempExt    = ".part"
-	remotePath = "/master" //"/for_ott" //"/master" // "/temp"
 )
 
 var (
+	ftpMode     = "ftp"
 	ftpHost     = ""
 	ftpPort     = -1
 	ftpUser     = ""
 	ftpPassword = ""
+	ftpPath     = "/master" //"/for_ott" //"/master" // "/temp"
 
 	files []string
 
@@ -36,20 +39,49 @@ var (
 	lbFiles *ListBox
 )
 
-func ftpInit() (*ftp.ServerConn, error) {
-	c, err := ftp.DialTimeout(ftpHost+":"+strconv.Itoa(ftpPort), 5*time.Second)
-	if err != nil {
-		return nil, err
+func ftpInit() (IFtp, error) { //(*ftp.ServerConn, error) {
+	switch ftpMode {
+	case "ftp":
+		c, err := ftp.DialTimeout(ftpHost+":"+strconv.Itoa(ftpPort), 5*time.Second)
+		if err != nil {
+			return nil, err
+		}
+		err = c.Login(ftpUser, ftpPassword)
+		if err != nil {
+			return nil, err
+		}
+		err = c.ChangeDir(ftpPath)
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	case "sftp":
+		addr := ftpHost + ":" + strconv.Itoa(ftpPort)
+		config := &ssh.ClientConfig{
+			User: ftpUser,
+			Auth: []ssh.AuthMethod{
+				ssh.Password(ftpPassword),
+			},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			// Config: ssh.Config{
+			// 	//Ciphers: []string{"aes128-cbc"},
+			// 	Ciphers: []string{"3des-cbc", "aes256-cbc", "aes192-cbc", "aes128-cbc"},
+			// },
+		}
+		conn, err := ssh.Dial("tcp", addr, config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to dial: " + err.Error())
+		}
+		client, err := sftp.NewClient(conn)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create client: " + err.Error())
+		}
+		c := &TSftp{}
+		c.client = client
+		// c.client.
+		return c, nil
 	}
-	err = c.Login(ftpUser, ftpPassword)
-	if err != nil {
-		return nil, err
-	}
-	err = c.ChangeDir(remotePath)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
+	return nil, fmt.Errorf("unknown create ftp client mode '%v'", ftpMode)
 }
 
 func ftpClose(c *ftp.ServerConn) {
@@ -57,7 +89,7 @@ func ftpClose(c *ftp.ServerConn) {
 }
 
 type ftpItem struct {
-	c         *ftp.ServerConn
+	c         IFtp //*ftp.ServerConn
 	filename  string
 	stopped   bool
 	working   bool
@@ -188,7 +220,7 @@ func (o *ftpItem) InitRemoteFile() bool {
 		return false
 	}
 	o.bytesSent = 0
-	remoteFile := remotePath + "/" + filepath.Base(o.filename)
+	remoteFile := ftpPath + "/" + filepath.Base(o.filename)
 	if size, err := o.c.FileSize(remoteFile); err == nil {
 		// file already uploaded
 		if o.fileSize == size {
@@ -196,7 +228,7 @@ func (o *ftpItem) InitRemoteFile() bool {
 		}
 	}
 
-	remoteFile = remotePath + "/" + filepath.Base(o.filename) + tempExt
+	remoteFile = ftpPath + "/" + filepath.Base(o.filename) + tempExt
 	if size, err := o.c.FileSize(remoteFile); err == nil && size <= o.fileSize {
 		o.bytesSent = size
 	} else {
@@ -229,7 +261,7 @@ func (o *ftpItem) Stor() {
 
 	o.started = time.Now()
 	fmt.Println("store started: ", o.bytesSent, filepath.Base(o.filename)+tempExt)
-	o.err = o.c.StorFrom(remotePath+"/"+filepath.Base(o.filename)+tempExt, o, uint64(o.bytesSent))
+	o.err = o.c.StorFrom(ftpPath+"/"+filepath.Base(o.filename)+tempExt, o, uint64(o.bytesSent))
 
 	o.completed = time.Now()
 	fmt.Println("delta: ", o.completed.Sub(o.started))
@@ -241,8 +273,8 @@ func (o *ftpItem) PostProcess() {
 		fmt.Println("PostProcess was error: " + fmt.Sprintf("%v", o.err))
 		return
 	}
-	src := remotePath + "/" + filepath.Base(o.filename) + tempExt
-	dst := remotePath + "/" + filepath.Base(o.filename)
+	src := ftpPath + "/" + filepath.Base(o.filename) + tempExt
+	dst := ftpPath + "/" + filepath.Base(o.filename)
 	o.c.Delete(dst)
 	o.err = o.c.Rename(src, dst)
 	if o.err != nil {
@@ -537,7 +569,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	root = sui.NewRootWindow("NEW MASTER ftp://"+ftpHost+remotePath, 800, 600)
+	root = sui.NewRootWindow("("+ftpMode+")://"+ftpHost+ftpPath, 800, 600)
 	//root.SetClearColor(sui.Palette.BackgroundLo)
 	//root.SetClearColor(sui.Color32(0x00000000))
 	root.OnDropFile = onDropFile
