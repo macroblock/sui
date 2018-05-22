@@ -1,8 +1,12 @@
 package main
 
-import "io"
-import "github.com/pkg/sftp"
-import "fmt"
+import (
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/pkg/sftp"
+)
 
 type IFtp interface {
 	//Close()
@@ -42,7 +46,7 @@ func (o *TSftp) StorFrom(path string, r io.Reader, offset uint64) error {
 	// if err != nil {
 	// 	return err
 	// }
-	f, err := o.client.Create(path)
+	f, err := o.client.OpenFile(path, os.O_CREATE|os.O_WRONLY)
 	if err != nil {
 		return err
 	}

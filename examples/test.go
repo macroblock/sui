@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -60,12 +61,28 @@ func ftpInit() (IFtp, error) { //(*ftp.ServerConn, error) {
 		config := &ssh.ClientConfig{
 			User: ftpUser,
 			Auth: []ssh.AuthMethod{
+				ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
+					// Just send the password back for all questions
+					answers := make([]string, len(questions))
+					for i := range answers {
+						answers[i] = ftpPassword
+					}
+					return answers, nil
+				}),
+				ssh.PasswordCallback(func() (string, error) { return ftpPassword, nil }),
 				ssh.Password(ftpPassword),
 			},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			// HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+				return nil
+			},
+			Timeout: 10 * time.Second,
 			// Config: ssh.Config{
 			// 	//Ciphers: []string{"aes128-cbc"},
-			// 	Ciphers: []string{"3des-cbc", "aes256-cbc", "aes192-cbc", "aes128-cbc"},
+			// 	//Ciphers: []string{"3des-cbc", "aes256-cbc", "aes192-cbc", "aes128-cbc"},
+			// 	Ciphers: []string{"aes128-ctr", "aes192-ctr", "aes256-ctr", "aes128-gcm@openssh.com",
+			// 		"arcfour256", "arcfour128", "aes128-cbc", "aes192-cbc", "aes256-cbc", "3des-cbc", "des-cbc",
+			// 	},
 			// },
 		}
 		conn, err := ssh.Dial("tcp", addr, config)
@@ -132,6 +149,7 @@ func (o *ftpItem) Close() {
 }
 
 func (o *ftpItem) Stop() {
+	o.err = fmt.Errorf("was stopped")
 	o.stopped = true
 	o.Clean()
 }
@@ -273,6 +291,10 @@ func (o *ftpItem) PostProcess() {
 		fmt.Println("PostProcess was error: " + fmt.Sprintf("%v", o.err))
 		return
 	}
+	if o.c == nil || o.stopped {
+		fmt.Println("PostProcess o.c is nil or stopped")
+		return
+	}
 	src := ftpPath + "/" + filepath.Base(o.filename) + tempExt
 	dst := ftpPath + "/" + filepath.Base(o.filename)
 	o.c.Delete(dst)
@@ -323,7 +345,7 @@ func (o *ftpItem) job() {
 	o.PostProcess()
 	o.Clean()
 	fmt.Println("job done.")
-	if o.err == nil {
+	if o.err == nil && !o.stopped {
 		o.done = true
 		fmt.Println("job well done.")
 	}

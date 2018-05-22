@@ -245,11 +245,13 @@ func Run() int {
 		// 	}
 
 		case *sdl.DropEvent:
-			glob.dropFile = t.File //C.GoString((*C.char)(t.File))
-			//fmt.Println(glob.dropFile)
-			glob.rootWindows[0].dropFile()
-			glob.dropFile = ""
-			PostUpdate()
+			if t.Type == sdl.DROPFILE {
+				glob.dropFile = t.File //C.GoString((*C.char)(t.File))
+				//fmt.Println(glob.dropFile)
+				glob.rootWindows[0].dropFile()
+				glob.dropFile = ""
+				PostUpdate()
+			}
 		}
 
 		if quit {
