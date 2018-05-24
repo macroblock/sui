@@ -89,7 +89,7 @@ func ftpInit() (IFtp, error) { //(*ftp.ServerConn, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Failed to dial: " + err.Error())
 		}
-		client, err := sftp.NewClient(conn)
+		client, err := sftp.NewClient(conn, sftp.MaxPacketUnchecked(261120))
 		if err != nil {
 			return nil, fmt.Errorf("Failed to create client: " + err.Error())
 		}
