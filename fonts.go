@@ -1,8 +1,6 @@
 package sui
 
 import (
-	"unsafe"
-
 	"golang.org/x/image/font/gofont/goregular"
 
 	"github.com/veandco/go-sdl2/sdl"
@@ -23,7 +21,11 @@ var (
 
 // InitFonts ...
 func InitFonts() {
-	rwops := sdl.RWFromMem(unsafe.Pointer(&goregular.TTF[0]), len(goregular.TTF))
+	// rwops := sdl.RWFromMem(unsafe.Pointer(&goregular.TTF[0]), len(goregular.TTF))
+	rwops, err := sdl.RWFromMem(goregular.TTF)
+	if err != nil {
+		panic(err)
+	}
 	defaultFont, _ = ttf.OpenFontRW(rwops, 1, 16)
 	// LatoRegular20, _ = ttf.OpenFontRW(rwops, 1, 20)
 	// LatoRegular24, _ = ttf.OpenFontRW(rwops, 1, 24)

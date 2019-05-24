@@ -2,11 +2,16 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/jlaffaye/ftp"
@@ -24,6 +29,9 @@ const (
 )
 
 var (
+	fileMutex   sync.Mutex
+	db          []string
+	fdb         *os.File
 	ftpMode     = "ftp"
 	ftpHost     = ""
 	ftpPort     = -1
@@ -106,6 +114,7 @@ func ftpClose(c *ftp.ServerConn) {
 }
 
 type ftpItem struct {
+	log       *os.File
 	c         IFtp //*ftp.ServerConn
 	filename  string
 	stopped   bool
@@ -138,6 +147,7 @@ func NewFtpItem(name string) *ftpItem {
 }
 
 func (o *ftpItem) Close() {
+	o.stopped = true
 	if o.file != nil {
 		o.file.Close()
 		o.file = nil
@@ -203,23 +213,35 @@ func (o *ftpItem) Read(p []byte) (int, error) {
 		o.bytesSent += int64(n)
 		//fmt.Println("Read", n, "bytes for a total of", pt.total)
 	} else {
-		fmt.Println("read err: ", err, n)
+		// TODO: should it be handled ?
+		if err != io.EOF {
+			// fmt.Println("!!! read err: ", err, n)
+		}
 	}
 
 	return n, err
 }
 
+func (o *ftpItem) InitLogFile() {
+	err := error(nil)
+	o.log, err = os.OpenFile(filepath.Join("log", filepath.Base(o.filename)+".log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (o *ftpItem) InitLocalFile() {
 	if o.err != nil {
-		fmt.Println("init local: was error")
+		// fmt.Println("init local: was error")
 		return
 	}
+	writeLog(o.log, "opening local file: %v", o.filename)
 	file, err := os.Open(o.filename)
 	if err != nil {
 		o.err = err
 		return
 	}
-	fmt.Println("open ok")
+	// fmt.Println("open ok")
 	stat, err := file.Stat()
 	if err != nil {
 		file.Close()
@@ -227,18 +249,19 @@ func (o *ftpItem) InitLocalFile() {
 		o.err = err
 		return
 	}
-	fmt.Println("stat ok")
+	// fmt.Println("stat ok")
 	o.fileSize = stat.Size()
 	o.file = file
 }
 
 func (o *ftpItem) InitRemoteFile() bool {
 	if o.err != nil {
-		fmt.Println("init remote: was error")
+		// fmt.Println("init remote: was error")
 		return false
 	}
 	o.bytesSent = 0
 	remoteFile := ftpPath + "/" + filepath.Base(o.filename)
+	writeLog(o.log, "checking remote file %q", remoteFile)
 	if size, err := o.c.FileSize(remoteFile); err == nil {
 		// file already uploaded
 		if o.fileSize == size {
@@ -249,7 +272,9 @@ func (o *ftpItem) InitRemoteFile() bool {
 	remoteFile = ftpPath + "/" + filepath.Base(o.filename) + tempExt
 	if size, err := o.c.FileSize(remoteFile); err == nil && size <= o.fileSize {
 		o.bytesSent = size
+		writeLog(o.log, "upload will be continued from %v bytes", o.bytesSent)
 	} else {
+		writeLog(o.log, "deleting file %q because of inconvinient size (%v > %v) if it exists", remoteFile, size, o.fileSize)
 		o.c.Delete(remoteFile)
 	}
 	return false
@@ -264,43 +289,53 @@ func (o *ftpItem) ReadyToWork() bool {
 
 func (o *ftpItem) Stor() {
 	if o.err != nil {
-		fmt.Println("stor: was an error")
+		// fmt.Println("stor: was an error")
 		return
 	}
-	fmt.Println("before stor is ok")
+	// fmt.Println("before stor is ok")
+	writeLog(o.log, "skipping already uploaded data (%v bytes)", o.bytesSent)
 	if pos, err := o.file.Seek(o.bytesSent, 0); pos != o.bytesSent || err != nil {
 		o.bytesSent = 0
 		if pos, err = o.file.Seek(0, 0); pos != o.bytesSent || err != nil {
-			//o.err = errors.New("File.Seek() error: something criticaly wrong")
+			o.err = errors.New("File.Seek() ERROR: something criticaly wrong")
 			o.err = err
 			return
 		}
 	}
 
 	o.started = time.Now()
-	fmt.Println("store started: ", o.bytesSent, filepath.Base(o.filename)+tempExt)
+	// fmt.Println("store started: ", o.bytesSent, filepath.Base(o.filename)+tempExt)
+	writeLog(o.log, "upload begun")
 	o.err = o.c.StorFrom(ftpPath+"/"+filepath.Base(o.filename)+tempExt, o, uint64(o.bytesSent))
 
 	o.completed = time.Now()
-	fmt.Println("delta: ", o.completed.Sub(o.started))
+	// fmt.Println("delta: ", o.completed.Sub(o.started))
+	writeLog(o.log, "upload ended")
 
 }
 
 func (o *ftpItem) PostProcess() {
 	if o.err != nil {
-		fmt.Println("PostProcess was error: " + fmt.Sprintf("%v", o.err))
+		// fmt.Println("PostProcess was error: " + fmt.Sprintf("%v", o.err))
 		return
 	}
 	if o.c == nil || o.stopped {
-		fmt.Println("PostProcess o.c is nil or stopped")
+		// fmt.Println("PostProcess o.c is nil or stopped")
+		writeLog(o.log, "upload stopped by user (or o.c is nil)")
 		return
 	}
-	src := ftpPath + "/" + filepath.Base(o.filename) + tempExt
-	dst := ftpPath + "/" + filepath.Base(o.filename)
+	src := path.Join(ftpPath, filepath.Base(o.filename)+tempExt)
+	dst := path.Join(ftpPath, filepath.Base(o.filename))
+
+	writeLog(o.log, "deleting old file %q if it exists:", dst)
 	o.c.Delete(dst)
+
+	writeLog(o.log, "renaming %q -> %q:", src, dst)
+	// fmt.Println("rename to  :", dst)
 	o.err = o.c.Rename(src, dst)
 	if o.err != nil {
-		fmt.Println("after PostProcess: " + fmt.Sprintf("%v", o.err))
+		// fmt.Println("post process ERROR: " + fmt.Sprintf("%v", o.err))
+		writeLog(o.log, "post process ERROR")
 	}
 }
 
@@ -331,11 +366,21 @@ func (o *ftpItem) StartJob() {
 func (o *ftpItem) job() {
 	//o.stopped = true
 	o.oldErr = o.err
+	o.InitLogFile()
+	defer o.log.Close()
+
+	writeLog(o.log, "------------------------------")
+	writeLog(o.log, "job started")
 	o.c, o.err = ftpInit()
+	if o.c != nil {
+		defer o.c.Quit()
+	}
 	o.InitLocalFile()
 	if o.InitRemoteFile() {
 		// file already uploaded
-		fmt.Println("file already uploaded")
+		fmt.Printf("WARNING: file has been already uploaded but wasn't found in db: %v\n", filepath.Base(o.filename))
+		writeLog(o.log, "WARNING: file has been already uploaded but wasn't found in db!")
+		writeLog(o.log, "job closed. (1)")
 		o.Clean()
 		o.done = true
 		o.working = false
@@ -343,12 +388,19 @@ func (o *ftpItem) job() {
 	}
 	o.Stor()
 	o.PostProcess()
-	o.Clean()
-	fmt.Println("job done.")
-	if o.err == nil && !o.stopped {
-		o.done = true
-		fmt.Println("job well done.")
+	if o.err == nil {
+		if !o.stopped {
+			writeLog(o.log, "upload successfully done")
+			appendName(fdb, &db, filepath.Base(o.filename))
+			o.done = true
+		} else {
+			writeLog(o.log, "upload interrupted by user")
+		}
+	} else {
+		writeLog(o.log, "upload interrupted by ERROR: %v", o.err)
 	}
+	writeLog(o.log, "job closed. (2)")
+	o.Clean()
 	o.working = false
 }
 
@@ -494,6 +546,7 @@ func moveTo(toTop bool) {
 
 func onDropFile() {
 	dropFileName := sui.DropFile()
+
 	for _, v := range lbFiles.items {
 		item := v.Data.(*ftpItem)
 		if item.filename == dropFileName {
@@ -501,6 +554,12 @@ func onDropFile() {
 			return
 		}
 	}
+
+	if existsName(db, filepath.Base(dropFileName)) {
+		fmt.Println("file has been already uploaded (found in db): ", filepath.Base(dropFileName))
+		return
+	}
+
 	item := NewFtpItem(dropFileName)
 	lbFiles.AddItem(fmt.Sprint(item.stopped, " ", item.filename), item)
 	lbFiles.itemIndex = len(lbFiles.items) - 1
@@ -583,10 +642,82 @@ func writeFtpItems() error {
 	return w.Flush()
 }
 
+// readLines reads a whole file into memory
+// and returns a slice of its lines.
+func readDb(path string) ([]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		s := scanner.Text()
+		// fmt.Println("line: ", s)
+		x := strings.Split(s, string('\t'))
+		// fmt.Println("slice: ", x[1])
+		if len(x) != 2 {
+			panic("wrong db format")
+		}
+		s = strings.TrimSpace(x[1])
+		if s == "" {
+			continue
+		}
+		lines = append(lines, s)
+	}
+	return lines, scanner.Err()
+}
+
+func existsName(db []string, name string) bool {
+	for _, s := range db {
+		// fmt.Printf("%v <-> %v\n", name, s)
+		if s == name {
+			return true
+		}
+	}
+	return false
+}
+
+func appendName(f *os.File, db *[]string, name string) {
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+	if _, err := f.WriteString(fmt.Sprintf("%v\t%v\n", time.Now().Format("2006-01-02 15:04:05"), name)); err != nil {
+		panic(err)
+	}
+	*db = append(*db, name)
+}
+
+func writeLog(f *os.File, format string, args ...interface{}) {
+	if _, err := f.WriteString(fmt.Sprintf("%v\t%v\n", time.Now().Format("2006-01-02 15:04:05"), fmt.Sprintf(format, args...))); err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 	//fmt.Println(ftpUser + ":" + ftpPassword + "@ftp://" + ftpHost + ":" + strconv.Itoa(ftpPort))
 	//ftpTest()
-	err := sui.Init()
+
+	err := error(nil)
+	db, err = readDb("db.list")
+	if err != nil {
+		panic("somethin wrong while reading db")
+	}
+	// fmt.Println("db: ", db)
+	// fmt.Println("err: ", err)
+
+	fdb, err = os.OpenFile("db.list", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer fdb.Close()
+
+	// if _, err = f.WriteString(text); err != nil {
+	// 	panic(err)
+	// }
+
+	err = sui.Init()
 	defer sui.Close()
 	if err != nil {
 		panic(err)
