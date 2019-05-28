@@ -30,7 +30,7 @@ const (
 
 var (
 	fileMutex   sync.Mutex
-	db          []string
+	db          map[string]struct{}
 	fdb         *os.File
 	ftpMode     = "ftp"
 	ftpHost     = ""
@@ -644,14 +644,16 @@ func writeFtpItems() error {
 
 // readLines reads a whole file into memory
 // and returns a slice of its lines.
-func readDb(path string) ([]string, error) {
+func readDb(path string) (map[string]struct{}, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var lines []string
+	// var lines []string
+	db := map[string]struct{}{}
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		s := scanner.Text()
@@ -665,28 +667,32 @@ func readDb(path string) ([]string, error) {
 		if s == "" {
 			continue
 		}
-		lines = append(lines, s)
+		// lines = append(lines, s)
+		db[s] = struct{}{}
 	}
-	return lines, scanner.Err()
+	return db, scanner.Err()
 }
 
-func existsName(db []string, name string) bool {
-	for _, s := range db {
-		// fmt.Printf("%v <-> %v\n", name, s)
-		if s == name {
-			return true
-		}
-	}
-	return false
+func existsName(db map[string]struct{}, name string) bool {
+	// for _, s := range db {
+	// 	// fmt.Printf("%v <-> %v\n", name, s)
+	// 	if s == name {
+	// 		return true
+	// 	}
+	// }
+	// return false
+	_, ok := db[name]
+	return ok
 }
 
-func appendName(f *os.File, db *[]string, name string) {
+func appendName(f *os.File, db *map[string]struct{}, name string) {
 	fileMutex.Lock()
 	defer fileMutex.Unlock()
 	if _, err := f.WriteString(fmt.Sprintf("%v\t%v\n", time.Now().Format("2006-01-02 15:04:05"), name)); err != nil {
 		panic(err)
 	}
-	*db = append(*db, name)
+	(*db)[name] = struct{}{}
+	// *db = append(*db, name)
 }
 
 func writeLog(f *os.File, format string, args ...interface{}) {
