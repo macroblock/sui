@@ -620,6 +620,15 @@ func readFtpItems() error {
 	//lines := []ftpItem{}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		name := scanner.Text()
+		name = strings.TrimSpace(name)
+		if existsName(db, name) {
+			continue
+		}
+		if existsName(db, filepath.Base(name)) {
+			fmt.Println("load queue error: file has been already uploaded (found in db): ", filepath.Base(name))
+			continue
+		}
 		item := NewFtpItem(scanner.Text())
 		lbFiles.AddItem(fmt.Sprint(item.stopped, " ", item.filename), item)
 		//lines = append(lines, scanner.Text())
